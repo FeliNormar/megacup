@@ -32,7 +32,7 @@ export default function LoginScreen({ workers, adminCred, onLogin }) {
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#0d1b3e] p-6">
       {/* Logo */}
       <div className="mb-8 text-center">
-        <img src="/logo.png" alt="Logo" className="h-32 mx-auto mb-2 drop-shadow-xl" />
+        <img src="/logo.png" alt="MEGA CUP" className="h-32 mx-auto mb-2 drop-shadow-xl" />
         <div className="text-[#8fa3b1] text-sm mt-1">Sistema de Gestión de Bodegas</div>
       </div>
 

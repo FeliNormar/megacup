@@ -1,4 +1,4 @@
-# 🏭 Sistema de Gestión de Bodegas
+# 🏭 MEGA CUP — Sistema de Gestión de Bodegas
 
 Sistema PWA (Progressive Web App) para el registro y control de descargas de trailers en tiempo real.
 Diseñado para uso en bodega: pantallas táctiles, operación rápida y funcionamiento offline.
@@ -49,7 +49,7 @@ Cámbialas inmediatamente desde **Configuración → Operadores** y **Configurac
 ## 🗂️ Árbol del proyecto
 
 ```
-bodega-pwa/
+megacup-pwa/
 │
 ├── backend/                        # Servidor Node.js + Express
 │   ├── server.js                   # API REST: assignments, records, analytics
@@ -58,7 +58,7 @@ bodega-pwa/
 │
 ├── frontend/                       # Aplicación React + Vite
 │   ├── public/
-│   │   └── logo.png                # Logo (usado en header y login)
+│   │   └── logo.png                # Logo MEGA CUP (usado en header y login)
 │   │
 │   ├── src/
 │   │   ├── hooks/
@@ -79,7 +79,7 @@ bodega-pwa/
 │   │
 │   ├── index.html                  # HTML base con meta PWA
 │   ├── vite.config.js              # Vite + PWA plugin (manifest, service worker, caché)
-│   ├── tailwind.config.js          # Paleta de colores
+│   ├── tailwind.config.js          # Paleta de colores MEGA CUP
 │   ├── postcss.config.js
 │   └── package.json
 │

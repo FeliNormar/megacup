@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/*.png'],
       manifest: {
-        name: 'Gestión de Bodegas',
-        short_name: 'Bodegas',
+        name: 'MEGA CUP - Gestión de Bodegas',
+        short_name: 'MegaCup',
         description: 'Sistema de gestión de descargas de trailers en tiempo real',
         theme_color: '#1a3a8f',
         background_color: '#0d1b3e',

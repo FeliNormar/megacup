@@ -1,5 +1,5 @@
 /**
- * Backend API
+ * MEGA CUP - Backend API
  * Persistencia en db.json (JSON flat-file).
  * Para producción: migrar a PostgreSQL con el esquema al final de este archivo.
  */

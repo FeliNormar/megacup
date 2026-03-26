@@ -124,9 +124,9 @@ function AppHeader({ dark, onToggleDark, onLogout, isAdmin, workerName }) {
       style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}
     >
       <div className="flex items-center gap-3">
-        <img src="/logo.png" alt="Logo" className="h-10 w-auto drop-shadow" />
+        <img src="/logo.png" alt="MEGA CUP" className="h-10 w-auto drop-shadow" />
         <div>
-          <p className="font-black text-white text-lg tracking-tight leading-none">Gestión de Bodegas</p>
+          <p className="font-black text-white text-lg tracking-tight leading-none">MEGA CUP</p>
           <p className="text-blue-200 text-[10px] leading-none">
             {isAdmin ? 'Administrador' : `Operador: ${workerName}`}
           </p>

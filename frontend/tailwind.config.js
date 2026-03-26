@@ -6,7 +6,7 @@ export default {
     extend: {
       colors: {
         brand: {
-          blue:    '#1a3a8f',   // azul marino
+          blue:    '#1a3a8f',   // azul marino MEGA CUP
           bluemid: '#2563c4',   // azul medio
           silver:  '#8fa3b1',   // gris plateado
           active:  '#16a34a',   // verde activo
