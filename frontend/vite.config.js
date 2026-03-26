@@ -1,0 +1,50 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['icons/*.png'],
+      manifest: {
+        name: 'Gestión de Bodegas',
+        short_name: 'Bodegas',
+        description: 'Sistema de gestión de descargas de trailers en tiempo real',
+        theme_color: '#1a3a8f',
+        background_color: '#0d1b3e',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
+        icons: [
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^http:\/\/localhost:3001\/api\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: { maxEntries: 100, maxAgeSeconds: 86400 }
+            }
+          }
+        ]
+      }
+    })
+  ],
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3001'
+    }
+  },
+  // En producción el frontend llama directo al backend de Render
+  // Configura VITE_API_URL en las variables de entorno de Vercel
+  define: {
+    __API_URL__: JSON.stringify(process.env.VITE_API_URL || '')
+  }
+})

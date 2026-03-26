@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; }
+  body { @apply bg-slate-100 dark:bg-[#0d1b3e] text-gray-900 dark:text-gray-100 font-sans; }
+}
+
+@layer utilities {
+  .touch-target { min-height: 48px; min-width: 48px; }
+  .timer-font { font-variant-numeric: tabular-nums; }
+  .mc-gradient { background: linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%); }
+  .mc-card { @apply bg-white dark:bg-[#162050] border border-[#8fa3b1]/30; }
+}

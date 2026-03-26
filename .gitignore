@@ -1,0 +1,32 @@
+# ── Dependencias ─────────────────────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# ── Build ─────────────────────────────────────────────────────────────────────
+frontend/dist/
+frontend/.vite/
+
+# ── Variables de entorno ──────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+backend/.env
+
+# ── Base de datos local ───────────────────────────────────────────────────────
+# Descomenta si no quieres subir datos al repo:
+# backend/db.json
+
+# ── Sistema operativo ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editores ──────────────────────────────────────────────────────────────────
+.vscode/settings.json
+*.swp
+*.swo
+
+# ── PWA / Service Worker (generados en build) ─────────────────────────────────
+frontend/public/sw.js
+frontend/public/workbox-*.js
