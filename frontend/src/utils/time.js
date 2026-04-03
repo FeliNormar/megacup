@@ -3,14 +3,16 @@
  * Todas usan el locale del dispositivo (es-MX) para consistencia.
  */
 
-/** Formatea timestamp → "HH:MM:SS" */
+/** Formatea timestamp → "DD/MM/YYYY h:MM AM/PM" */
 export function fmtTime(ts) {
   if (!ts) return '—'
-  return new Date(ts).toLocaleTimeString('es-MX', {
-    hour:   '2-digit',
+  return new Date(ts).toLocaleString('es-MX', {
+    day:    '2-digit',
+    month:  '2-digit',
+    year:   'numeric',
+    hour:   'numeric',
     minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
+    hour12: true,
   })
 }
 
