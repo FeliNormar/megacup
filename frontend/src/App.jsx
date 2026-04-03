@@ -10,8 +10,8 @@ import SettingsPanel    from './components/SettingsPanel'
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Descargas' },
-  { id: 'analytics', icon: BarChart2,       label: 'Analítica' },
-  { id: 'settings',  icon: Settings,        label: 'Config',   adminOnly: true },
+  { id: 'analytics', icon: BarChart2,       label: 'Analítica', adminOrAlmacen: true },
+  { id: 'settings',  icon: Settings,        label: 'Config',    adminOnly: true },
 ]
 
 export default function App() {
@@ -21,17 +21,18 @@ export default function App() {
   const {
     dark, setDark,
     session, setSession,
-    workers, setWorkers,
-    naves,   setNaves,
+    workers,   setWorkers,
+    naves,     setNaves,
     providers, setProviders,
     adminCred, setAdminCred,
     records,
     visibleAssignments,
     activeNaveIds,
-    isAdmin, isWorker,
+    isAdmin, isAlmacenista, isWorker,
     createDescarga,
     finishDescarga,
     reportIncident,
+    updateWorkers,
   } = useAppState()
 
   // ── Pantalla de login ────────────────────────────────────────────────────
@@ -45,6 +46,8 @@ export default function App() {
     )
   }
 
+  const roleLabel = isAdmin ? 'Administrador' : (isAlmacenista ? 'Almacenista' : `Operador: ${session.workerName}`)
+
   // ── App principal ────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#0d1b3e] flex flex-col">
@@ -53,8 +56,7 @@ export default function App() {
         dark={dark}
         onToggleDark={() => setDark((d) => !d)}
         onLogout={() => setSession(null)}
-        isAdmin={isAdmin}
-        workerName={session.workerName}
+        roleLabel={roleLabel}
       />
 
       <main className="flex-1 overflow-y-auto p-4 pb-24 relative">
@@ -68,6 +70,7 @@ export default function App() {
             <Dashboard
               isAdmin={isAdmin}
               isWorker={isWorker}
+              isAlmacenista={isAlmacenista}
               naves={naves}
               visibleAssignments={visibleAssignments}
               onNewDescarga={() => setShowNew(true)}
@@ -76,7 +79,7 @@ export default function App() {
             />
           )}
 
-          {tab === 'analytics' && (
+          {tab === 'analytics' && (isAdmin || isAlmacenista) && (
             <Analytics records={records} providers={providers} dark={dark} />
           )}
 
@@ -86,7 +89,7 @@ export default function App() {
               naves={naves}
               providers={providers}
               adminCred={adminCred}
-              onUpdateWorkers={setWorkers}
+              onUpdateWorkers={updateWorkers}
               onUpdateNaves={setNaves}
               onUpdateProviders={setProviders}
               onUpdateAdmin={setAdminCred}
@@ -99,6 +102,7 @@ export default function App() {
         tab={tab}
         onTabChange={setTab}
         isAdmin={isAdmin}
+        isAlmacenista={isAlmacenista}
       />
 
       {showNew && isAdmin && (
@@ -117,7 +121,7 @@ export default function App() {
 
 // ── Sub-componentes de layout ────────────────────────────────────────────────
 
-function AppHeader({ dark, onToggleDark, onLogout, isAdmin, workerName }) {
+function AppHeader({ dark, onToggleDark, onLogout, roleLabel }) {
   return (
     <header
       className="sticky top-0 z-30 shadow-lg flex items-center justify-between px-4 py-3"
@@ -128,7 +132,7 @@ function AppHeader({ dark, onToggleDark, onLogout, isAdmin, workerName }) {
         <div>
           <p className="font-black text-white text-lg tracking-tight leading-none">MEGA CUP</p>
           <p className="text-blue-200 text-[10px] leading-none">
-            {isAdmin ? 'Administrador' : `Operador: ${workerName}`}
+            {roleLabel}
           </p>
         </div>
       </div>
@@ -153,7 +157,7 @@ function AppHeader({ dark, onToggleDark, onLogout, isAdmin, workerName }) {
   )
 }
 
-function Dashboard({ isAdmin, isWorker, naves, visibleAssignments, onNewDescarga, onFinish, onIncident }) {
+function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, visibleAssignments, onNewDescarga, onFinish, onIncident }) {
   return (
     <div className="space-y-4">
       {isAdmin && (
@@ -168,7 +172,7 @@ function Dashboard({ isAdmin, isWorker, naves, visibleAssignments, onNewDescarga
       )}
 
       {visibleAssignments.length === 0 ? (
-        <EmptyState isAdmin={isAdmin} />
+        <EmptyState isAdmin={isAdmin} isAlmacenista={isAlmacenista} />
       ) : (
         visibleAssignments.map((a) => {
           const nave = naves.find((n) => n.id === a.naveId) || { name: a.naveName || a.naveId }
@@ -188,24 +192,28 @@ function Dashboard({ isAdmin, isWorker, naves, visibleAssignments, onNewDescarga
   )
 }
 
-function EmptyState({ isAdmin }) {
+function EmptyState({ isAdmin, isAlmacenista }) {
   return (
     <div className="text-center py-16 text-[#8fa3b1]">
       <div className="text-5xl mb-3">📦</div>
       <p className="text-lg font-semibold">
-        {isAdmin ? 'Sin descargas activas' : 'No tienes descargas asignadas'}
+        {(isAdmin || isAlmacenista) ? 'Sin descargas activas' : 'No tienes descargas asignadas'}
       </p>
       <p className="text-sm mt-1">
         {isAdmin
           ? 'Presiona "Nueva Descarga" para comenzar.'
-          : 'El administrador te asignará cuando haya un trailer.'}
+          : (isAlmacenista ? 'Espera a que el administrador cree una descarga.' : 'El administrador te asignará cuando haya un trailer.')}
       </p>
     </div>
   )
 }
 
-function BottomNav({ tab, onTabChange, isAdmin }) {
-  const items = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin)
+function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista }) {
+  const items = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly) return isAdmin
+    if (item.adminOrAlmacen) return isAdmin || isAlmacenista
+    return true
+  })
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#162050] border-t border-[#8fa3b1]/30 flex">
