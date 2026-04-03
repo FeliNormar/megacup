@@ -33,6 +33,7 @@ export default function App() {
     finishDescarga,
     reportIncident,
     updateWorkers,
+    updateAdmin,
   } = useAppState()
 
   // ── Pantalla de login ────────────────────────────────────────────────────
@@ -92,7 +93,7 @@ export default function App() {
               onUpdateWorkers={updateWorkers}
               onUpdateNaves={setNaves}
               onUpdateProviders={setProviders}
-              onUpdateAdmin={setAdminCred}
+              onUpdateAdmin={updateAdmin}
             />
           )}
         </div>

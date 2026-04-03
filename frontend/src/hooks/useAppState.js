@@ -59,6 +59,12 @@ export function useAppState() {
           setWorkers(workersData)
           ls.set('mc_workers', workersData)
         }
+        // Cargar credenciales admin
+        const { data: adminData } = await supabase.from('config').select('value').eq('key', 'admin').single()
+        if (adminData?.value) {
+          setAdminCred(adminData.value)
+          ls.set('mc_admin', adminData.value)
+        }
       } catch (err) {
         console.error('Error cargando datos de Supabase:', err)
       }
@@ -83,9 +89,25 @@ export function useAppState() {
   const updateWorkers = async (newWorkers) => {
     setWorkers(newWorkers)
     ls.set('mc_workers', newWorkers)
-    // Reemplaza todos los workers en Supabase
-    await supabase.from('workers').delete().neq('id', '')
-    if (newWorkers.length > 0) await supabase.from('workers').insert(newWorkers)
+    try {
+      await supabase.from('workers').delete().neq('id', '')
+      if (newWorkers.length > 0) {
+        const { error } = await supabase.from('workers').insert(newWorkers)
+        if (error) console.error('Error guardando workers:', error)
+      }
+    } catch (err) {
+      console.error('Error sync workers:', err)
+    }
+  }
+
+  const updateAdmin = async (newCred) => {
+    setAdminCred(newCred)
+    ls.set('mc_admin', newCred)
+    try {
+      await supabase.from('config').upsert({ key: 'admin', value: newCred })
+    } catch (err) {
+      console.error('Error sync admin:', err)
+    }
   }
 
   const createDescarga = async (data) => {
@@ -160,6 +182,7 @@ export function useAppState() {
     finishDescarga,
     reportIncident,
     updateWorkers,
+    updateAdmin,
 
     // Derivados
     visibleAssignments,
