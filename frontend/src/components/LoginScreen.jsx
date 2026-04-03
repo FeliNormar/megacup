@@ -13,7 +13,7 @@ export default function LoginScreen({ workers, adminCred, onLogin }) {
   const handleWorker = () => {
     const w = workers.find((x) => x.name.toLowerCase() === username.trim().toLowerCase())
     if (!w)              { setError('Usuario no encontrado'); return }
-    if (w.password !== password) { setError('Contraseña incorrecta'); setPassword(''); return }
+    if ((w.pwd || w.password) !== password) { setError('Contraseña incorrecta'); setPassword(''); return }
     onLogin({ role: 'worker', workerId: w.id, workerName: w.name })
   }
 
@@ -26,7 +26,16 @@ export default function LoginScreen({ workers, adminCred, onLogin }) {
     }
   }
 
-  const handle = mode === 'admin' ? handleAdmin : handleWorker
+  const handleAlmacen = () => {
+    if (username.trim() === 'almacen' && password === '1234') {
+      onLogin({ role: 'almacenista' })
+    } else {
+      setError('Credenciales de almacenista incorrectas')
+      setPassword('')
+    }
+  }
+
+  const handle = mode === 'admin' ? handleAdmin : (mode === 'almacen' ? handleAlmacen : handleWorker)
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#0d1b3e] p-6">
@@ -39,9 +48,13 @@ export default function LoginScreen({ workers, adminCred, onLogin }) {
       <div className="w-full max-w-sm bg-[#162050] rounded-2xl p-6 shadow-2xl border border-[#8fa3b1]/20 space-y-4">
         {/* Toggle */}
         <div className="flex rounded-xl overflow-hidden border border-[#8fa3b1]/30">
-          {[['worker', 'Operador'], ['admin', 'Administrador']].map(([m, label]) => (
+          {[
+            ['worker', 'Operador'],
+            ['almacen', 'Almacén'],
+            ['admin', 'Admin']
+          ].map(([m, label]) => (
             <button key={m} onClick={() => { setMode(m); clear() }}
-              className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
+              className={`flex-1 py-2.5 text-[11px] font-semibold transition-colors ${
                 mode === m ? 'bg-[#1a3a8f] text-white' : 'text-[#8fa3b1]'
               }`}>
               {label}

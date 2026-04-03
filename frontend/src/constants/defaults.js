@@ -4,9 +4,9 @@
  */
 
 export const DEFAULT_WORKERS = [
-  { id: 'w1', name: 'Operador1',  password: 'changeme' },
-  { id: 'w2', name: 'Operador2',  password: 'changeme' },
-  { id: 'w3', name: 'Operador3',  password: 'changeme' },
+  { id: 'w1', name: 'Operador1',  pwd: 'changeme' },
+  { id: 'w2', name: 'Operador2',  pwd: 'changeme' },
+  { id: 'w3', name: 'Operador3',  pwd: 'changeme' },
 ]
 
 export const DEFAULT_NAVES = [
@@ -29,4 +29,9 @@ export const DEFAULT_PROVIDERS = [
 export const DEFAULT_ADMIN = {
   username: 'admin',
   pin:      'changeme',
+}
+
+export const DEFAULT_ALMACENISTA = {
+  username: 'almacen',
+  pin:      '1234',
 }

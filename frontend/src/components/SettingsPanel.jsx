@@ -61,7 +61,7 @@ function WorkersList({ workers, onChange }) {
     const n = name.trim()
     const p = pass.trim()
     if (!n || !p) return
-    onChange([...workers, { id: uid(), name: n, password: p }])
+    onChange([...workers, { id: uid(), name: n, pwd: p }])
     setName(''); setPass('')
   }
 
@@ -69,7 +69,7 @@ function WorkersList({ workers, onChange }) {
 
   const saveEdit = (id) => {
     if (!editPwd.trim()) return
-    onChange(workers.map((w) => w.id === id ? { ...w, password: editPwd.trim() } : w))
+    onChange(workers.map((w) => w.id === id ? { ...w, pwd: editPwd.trim() } : w))
     setEditId(null); setEditPwd('')
   }
 
