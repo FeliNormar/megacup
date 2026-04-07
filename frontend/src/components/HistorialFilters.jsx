@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
-import { Search, X, ChevronDown } from 'lucide-react'
+import { Search, X, ChevronDown, FileSpreadsheet, FileText } from 'lucide-react'
 import { fmtTime, fmtDuration } from '../utils/time'
 import { Trash2, AlertTriangle } from 'lucide-react'
+import { exportToExcel, exportToPDF } from '../utils/export'
 
 const PAGE_SIZE = 50
 
@@ -26,7 +27,7 @@ function highlight(text, query) {
   )
 }
 
-export default function HistorialFilters({ records = [], naves = [], workers = [], providers = [], isAdmin, onDelete }) {
+export default function HistorialFilters({ records = [], naves = [], workers = [], providers = [], isAdmin, isAlmacenista, onDelete }) {
   const [desde,      setDesde]      = useState('')
   const [hasta,      setHasta]      = useState('')
   const [filtWorker, setFiltWorker] = useState('')
@@ -48,7 +49,12 @@ export default function HistorialFilters({ records = [], naves = [], workers = [
     setSearch(''); setSearchVal(''); setPage(1)
   }
 
-  const hasFilters = desde || hasta || filtWorker || filtProv || filtNave || search
+  const activeFilters = { desde, hasta, operador: filtWorker, proveedor: filtProv, nave: filtNave, search }
+
+  const handleExcelAll = () => exportToExcel(filtered, activeFilters)
+  const handlePDFAll   = () => exportToPDF(filtered, activeFilters)
+
+  const canExport = isAdmin || isAlmacenista
 
   // Filtrado principal
   const filtered = useMemo(() => {
@@ -79,8 +85,23 @@ export default function HistorialFilters({ records = [], naves = [], workers = [
   const paginated = filtered.slice(0, page * PAGE_SIZE)
   const hasMore   = paginated.length < filtered.length
 
+  const hasFilters = desde || hasta || filtWorker || filtProv || filtNave || search
+
   return (
     <div className="space-y-3">
+      {/* Botones exportar */}
+      {canExport && (
+        <div className="flex gap-2 justify-end">
+          <button onClick={handleExcelAll}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-600 text-white text-xs font-semibold hover:bg-green-700">
+            <FileSpreadsheet size={14} /> Excel
+          </button>
+          <button onClick={handlePDFAll}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 text-white text-xs font-semibold hover:bg-red-700">
+            <FileText size={14} /> PDF
+          </button>
+        </div>
+      )}
       {/* Barra de búsqueda */}
       <div className="relative">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8fa3b1]" />

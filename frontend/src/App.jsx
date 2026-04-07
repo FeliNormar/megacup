@@ -94,6 +94,7 @@ export default function App() {
               providers={providers}
               dark={dark}
               isAdmin={isAdmin}
+              isAlmacenista={isAlmacenista}
               onDeleteRecord={softDeleteRecord}
               onEditRecord={editRecord}
               naves={naves}

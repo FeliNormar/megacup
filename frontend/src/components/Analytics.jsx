@@ -13,7 +13,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const PROVIDERS = ['Pactiv', 'Arero', 'Maver', 'Dart', 'Desola', 'Biodeli']
 
-export default function Analytics({ records = [], dark, isAdmin, onDeleteRecord, onEditRecord, naves, workers, providers }) {
+export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers }) {
   const now   = new Date()
   const curM  = now.getMonth()
   const curY  = now.getFullYear()
@@ -99,6 +99,7 @@ export default function Analytics({ records = [], dark, isAdmin, onDeleteRecord,
           workers={workers || []}
           providers={providers || []}
           isAdmin={isAdmin}
+          isAlmacenista={isAlmacenista}
           onDelete={onDeleteRecord}
         />
       </div>
