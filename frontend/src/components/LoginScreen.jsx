@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Lock, User, ChevronRight, Eye, EyeOff } from 'lucide-react'
+import { Lock, User, ChevronRight, Eye, EyeOff, Loader } from 'lucide-react'
+import { verifyPassword, saveSession } from '../utils/auth'
 
 export default function LoginScreen({ workers, adminCred, onLogin }) {
   const [mode,     setMode]     = useState('worker')
@@ -7,35 +8,48 @@ export default function LoginScreen({ workers, adminCred, onLogin }) {
   const [password, setPassword] = useState('')
   const [showPwd,  setShowPwd]  = useState(false)
   const [error,    setError]    = useState('')
+  const [loading,  setLoading]  = useState(false)
 
   const clear = () => { setUsername(''); setPassword(''); setError('') }
 
-  const handleWorker = () => {
+  const handleWorker = async () => {
     const w = workers.find((x) => x.name.toLowerCase() === username.trim().toLowerCase())
-    if (!w)              { setError('Usuario no encontrado'); return }
-    if ((w.pwd || w.password) !== password) { setError('Contraseña incorrecta'); setPassword(''); return }
-    onLogin({ role: 'worker', workerId: w.id, workerName: w.name })
+    if (!w) { setError('Usuario no encontrado'); return }
+    setLoading(true)
+    const ok = await verifyPassword(password, w.pwd || w.password || '')
+    setLoading(false)
+    if (!ok) { setError('Contraseña incorrecta'); setPassword(''); return }
+    const sessionUser = { role: 'worker', workerId: w.id, workerName: w.name }
+    saveSession(sessionUser)
+    onLogin(sessionUser)
   }
 
-  const handleAdmin = () => {
-    if (username.trim() === adminCred.username && password === adminCred.pin) {
-      onLogin({ role: 'admin' })
-    } else {
-      setError('Usuario o contraseña incorrectos')
-      setPassword('')
-    }
+  const handleAdmin = async () => {
+    if (username.trim() !== adminCred.username) { setError('Usuario o contraseña incorrectos'); setPassword(''); return }
+    setLoading(true)
+    const ok = await verifyPassword(password, adminCred.pin || '')
+    setLoading(false)
+    if (!ok) { setError('Usuario o contraseña incorrectos'); setPassword(''); return }
+    const sessionUser = { role: 'admin' }
+    saveSession(sessionUser)
+    onLogin(sessionUser)
   }
 
-  const handleAlmacen = () => {
-    if (username.trim() === 'almacen' && password === '1234') {
-      onLogin({ role: 'almacenista' })
-    } else {
-      setError('Credenciales de almacenista incorrectas')
-      setPassword('')
-    }
+  const handleAlmacen = async () => {
+    setLoading(true)
+    const ok = await verifyPassword(password, '1234')
+    setLoading(false)
+    if (username.trim() !== 'almacen' || !ok) { setError('Credenciales incorrectas'); setPassword(''); return }
+    const sessionUser = { role: 'almacenista' }
+    saveSession(sessionUser)
+    onLogin(sessionUser)
   }
 
-  const handle = mode === 'admin' ? handleAdmin : (mode === 'almacen' ? handleAlmacen : handleWorker)
+  const handle = () => {
+    if (mode === 'admin')   handleAdmin()
+    else if (mode === 'almacen') handleAlmacen()
+    else handleWorker()
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#0d1b3e] p-6">
@@ -100,10 +114,11 @@ export default function LoginScreen({ workers, adminCred, onLogin }) {
         {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
         <button onClick={handle}
-          className="touch-target w-full rounded-xl text-white font-bold py-3 flex items-center justify-center gap-2"
+          disabled={loading}
+          className="touch-target w-full rounded-xl text-white font-bold py-3 flex items-center justify-center gap-2 disabled:opacity-60"
           style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}>
-          {mode === 'admin' ? <Lock size={17} /> : <User size={17} />}
-          Ingresar <ChevronRight size={16} />
+          {loading ? <Loader size={17} className="animate-spin" /> : (mode === 'admin' ? <Lock size={17} /> : <User size={17} />)}
+          {loading ? 'Verificando...' : 'Ingresar'} {!loading && <ChevronRight size={16} />}
         </button>
       </div>
     </div>

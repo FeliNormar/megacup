@@ -20,7 +20,7 @@ export default function App() {
 
   const {
     dark, setDark,
-    session, setSession,
+    session, setSession, logout,
     workers,   setWorkers,
     naves,     setNaves,
     providers, setProviders,
@@ -60,7 +60,7 @@ export default function App() {
       <AppHeader
         dark={dark}
         onToggleDark={() => setDark((d) => !d)}
-        onLogout={() => setSession(null)}
+        onLogout={logout}
         roleLabel={roleLabel}
       />
 

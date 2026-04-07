@@ -8,6 +8,7 @@ import {
   DEFAULT_ADMIN,
 } from '../constants/defaults'
 import { supabase } from '../utils/supabase'
+import { loadSession, clearSession, hashPassword } from '../utils/auth'
 
 /**
  * useAppState — Estado global de la aplicación.
@@ -20,7 +21,12 @@ export function useAppState() {
     ls.get('mc_dark', window.matchMedia('(prefers-color-scheme: dark)').matches)
   )
 
-  const [session, setSession] = useState(null)
+  const [session, setSession] = useState(() => loadSession())
+
+  const logout = () => {
+    clearSession()
+    setSession(null)
+  }
   
   const [workers,   setWorkers]   = useState(() => ls.get('mc_workers',   DEFAULT_WORKERS))
   const [naves,     setNaves]     = useState(() => ls.get('mc_naves',     DEFAULT_NAVES))
@@ -84,14 +90,21 @@ export function useAppState() {
   useEffect(() => { ls.set('mc_providers',   providers)   }, [providers])
   useEffect(() => { ls.set('mc_admin',       adminCred)   }, [adminCred])
 
-  // Guarda workers en Supabase al cambiar
+  // Guarda workers en Supabase al cambiar — hashea contraseñas nuevas
   const updateWorkers = async (newWorkers) => {
-    setWorkers(newWorkers)
-    ls.set('mc_workers', newWorkers)
+    // Hashear contraseñas que no estén hasheadas aún
+    const hashed = await Promise.all(newWorkers.map(async (w) => {
+      if (w.pwd && !w.pwd.startsWith('$2')) {
+        return { ...w, pwd: await hashPassword(w.pwd) }
+      }
+      return w
+    }))
+    setWorkers(hashed)
+    ls.set('mc_workers', hashed)
     try {
       await supabase.from('workers').delete().neq('id', '')
-      if (newWorkers.length > 0) {
-        const { error } = await supabase.from('workers').insert(newWorkers)
+      if (hashed.length > 0) {
+        const { error } = await supabase.from('workers').insert(hashed)
         if (error) console.error('Error guardando workers:', error)
       }
     } catch (err) {
@@ -100,10 +113,15 @@ export function useAppState() {
   }
 
   const updateAdmin = async (newCred) => {
-    setAdminCred(newCred)
-    ls.set('mc_admin', newCred)
+    // Hashear pin si no está hasheado
+    const credToSave = { ...newCred }
+    if (credToSave.pin && !credToSave.pin.startsWith('$2')) {
+      credToSave.pin = await hashPassword(credToSave.pin)
+    }
+    setAdminCred(credToSave)
+    ls.set('mc_admin', credToSave)
     try {
-      await supabase.from('config').upsert({ key: 'admin', value: newCred })
+      await supabase.from('config').upsert({ key: 'admin', value: credToSave })
     } catch (err) {
       console.error('Error sync admin:', err)
     }
@@ -185,7 +203,7 @@ export function useAppState() {
   return {
     // Estado
     dark, setDark,
-    session, setSession,
+    session, setSession, logout,
     workers,   setWorkers,
     naves,     setNaves,
     providers, setProviders,
