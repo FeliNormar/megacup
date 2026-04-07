@@ -34,6 +34,10 @@ export default function App() {
     reportIncident,
     updateWorkers,
     updateAdmin,
+    softDeleteAssignment,
+    softDeleteRecord,
+    editAssignment,
+    editRecord,
   } = useAppState()
 
   // ── Pantalla de login ────────────────────────────────────────────────────
@@ -73,15 +77,28 @@ export default function App() {
               isWorker={isWorker}
               isAlmacenista={isAlmacenista}
               naves={naves}
+              providers={providers}
+              workers={workers}
               visibleAssignments={visibleAssignments}
               onNewDescarga={() => setShowNew(true)}
               onFinish={finishDescarga}
               onIncident={reportIncident}
+              onDelete={softDeleteAssignment}
+              onEdit={editAssignment}
             />
           )}
 
           {tab === 'analytics' && (isAdmin || isAlmacenista) && (
-            <Analytics records={records} providers={providers} dark={dark} />
+            <Analytics
+              records={records}
+              providers={providers}
+              dark={dark}
+              isAdmin={isAdmin}
+              onDeleteRecord={softDeleteRecord}
+              onEditRecord={editRecord}
+              naves={naves}
+              workers={workers}
+            />
           )}
 
           {tab === 'settings' && isAdmin && (
@@ -158,7 +175,7 @@ function AppHeader({ dark, onToggleDark, onLogout, roleLabel }) {
   )
 }
 
-function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, visibleAssignments, onNewDescarga, onFinish, onIncident }) {
+function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers, visibleAssignments, onNewDescarga, onFinish, onIncident, onDelete, onEdit }) {
   return (
     <div className="space-y-4">
       {isAdmin && (
@@ -183,8 +200,14 @@ function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, visibleAssignments
               nave={nave}
               assignment={a}
               isWorker={isWorker}
+              isAdmin={isAdmin}
+              providers={providers}
+              workers={workers}
+              naves={naves}
               onFinish={() => onFinish(a.naveId)}
               onIncident={() => onIncident(a.naveId)}
+              onDelete={() => onDelete(a.naveId)}
+              onEdit={(changes) => onEdit(a.naveId, changes)}
             />
           )
         })

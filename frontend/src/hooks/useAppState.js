@@ -44,14 +44,13 @@ export function useAppState() {
     async function fetchData() {
       try {
         // Cargar descargas activas
-        const { data: activeData } = await supabase.from('assignments').select('*').eq('status', 'active')
+        const { data: activeData } = await supabase.from('assignments').select('*').eq('status', 'active').is('deleted_at', null)
         if (activeData && activeData.length > 0) {
           const map = {}
           activeData.forEach(a => map[a.naveId] = a)
           setAssignments(map)
         }
-        // Cargar historial
-        const { data: recordsData } = await supabase.from('records').select('*').order('endTime', { ascending: false }).limit(100)
+        const { data: recordsData } = await supabase.from('records').select('*').is('deleted_at', null).order('endTime', { ascending: false }).limit(100)
         if (recordsData && recordsData.length > 0) setRecords(recordsData)
         // Cargar workers
         const { data: workersData } = await supabase.from('workers').select('*')
@@ -118,23 +117,16 @@ export function useAppState() {
       status:    'active',
     }
     setAssignments((prev) => ({ ...prev, [data.naveId]: assignment }))
-    
-    // Guardar en Supabase
     await supabase.from('assignments').insert([assignment])
   }
 
   const finishDescarga = async (naveId) => {
     const a = assignments[naveId]
     if (!a) return
-
     const record = { ...a, endTime: Date.now(), status: 'finished' }
-    setAssignments((prev) => {
-      const next = { ...prev }; delete next[naveId]; return next
-    })
+    setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
     setRecords((r) => [record, ...r])
     clearTimer(a.id)
-
-    // Actualizar en Supabase
     await supabase.from('assignments').delete().eq('id', a.id)
     await supabase.from('records').insert([record])
   }
@@ -142,17 +134,41 @@ export function useAppState() {
   const reportIncident = async (naveId) => {
     const a = assignments[naveId]
     if (!a) return
-
     const record = { ...a, endTime: Date.now(), status: 'incident' }
-    setAssignments((prev) => {
-      const next = { ...prev }; delete next[naveId]; return next
-    })
+    setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
     setRecords((r) => [record, ...r])
     clearTimer(a.id)
-
-    // Actualizar en Supabase
     await supabase.from('assignments').delete().eq('id', a.id)
     await supabase.from('records').insert([record])
+  }
+
+  // Soft delete — nunca borra físicamente
+  const softDeleteAssignment = async (naveId) => {
+    const a = assignments[naveId]
+    if (!a) return
+    setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
+    clearTimer(a.id)
+    await supabase.from('assignments').update({ deleted_at: new Date().toISOString() }).eq('id', a.id)
+  }
+
+  const softDeleteRecord = async (id) => {
+    setRecords((prev) => prev.filter((r) => r.id !== id))
+    await supabase.from('records').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+  }
+
+  // Editar descarga activa
+  const editAssignment = async (naveId, changes) => {
+    const a = assignments[naveId]
+    if (!a) return
+    const updated = { ...a, ...changes }
+    setAssignments((prev) => ({ ...prev, [naveId]: updated }))
+    await supabase.from('assignments').update(changes).eq('id', a.id)
+  }
+
+  // Editar registro del historial
+  const editRecord = async (id, changes) => {
+    setRecords((prev) => prev.map((r) => r.id === id ? { ...r, ...changes } : r))
+    await supabase.from('records').update(changes).eq('id', id)
   }
 
   // ── Vistas derivadas ──────────────────────────────────────────────────────
@@ -181,6 +197,10 @@ export function useAppState() {
     createDescarga,
     finishDescarga,
     reportIncident,
+    softDeleteAssignment,
+    softDeleteRecord,
+    editAssignment,
+    editRecord,
     updateWorkers,
     updateAdmin,
 

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement,
@@ -6,12 +6,13 @@ import {
 } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
 import { avgMinutesByProvider, fmtTime, fmtDuration } from '../utils/time'
+import { Trash2, AlertTriangle } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const PROVIDERS = ['Pactiv', 'Arero', 'Maver', 'Dart', 'Desola', 'Biodeli']
 
-export default function Analytics({ records = [], dark }) {
+export default function Analytics({ records = [], dark, isAdmin, onDeleteRecord, onEditRecord, naves, workers }) {
   const now   = new Date()
   const curM  = now.getMonth()
   const curY  = now.getFullYear()
@@ -92,24 +93,55 @@ export default function Analytics({ records = [], dark }) {
           ? <p className="text-gray-400 text-sm text-center py-4">Sin registros</p>
           : <div className="space-y-2">
               {records.slice(0, 20).map((r) => (
-                <div key={r.id} className="rounded-xl border border-[#8fa3b1]/20 p-3 text-sm">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-[#1a3a8f] dark:text-white">{r.naveName || r.naveId}</span>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      r.status === 'finished' ? 'bg-pink-100 text-pink-600' : 'bg-red-100 text-red-600'
-                    }`}>
-                      {r.status === 'finished' ? 'Terminado' : 'Incidencia'}
-                    </span>
-                  </div>
-                  <p className="text-[#8fa3b1] text-xs">📅 Inicio: {fmtTime(r.startTime)}</p>
-                  <p className="text-[#8fa3b1] text-xs">⏱ Duración: {fmtDuration(r.endTime - r.startTime)}</p>
-                  <p className="text-[#8fa3b1] text-xs">🏭 {r.provider} — {r.product}</p>
-                  {r.workers?.length > 0 && <p className="text-[#8fa3b1] text-xs">👷 {r.workers.join(', ')}</p>}
-                </div>
+                <HistorialRow key={r.id} record={r} isAdmin={isAdmin} onDelete={() => onDeleteRecord(r.id)} />
               ))}
             </div>
         }
       </div>
+    </div>
+  )
+}
+
+function HistorialRow({ record: r, isAdmin, onDelete }) {
+  const [confirmDel, setConfirmDel] = useState(false)
+  return (
+    <div className="rounded-xl border border-[#8fa3b1]/20 p-3 text-sm">
+      <div className="flex items-center justify-between mb-1">
+        <span className="font-bold text-[#1a3a8f] dark:text-white">{r.naveName || r.naveId}</span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+            r.status === 'finished' ? 'bg-pink-100 text-pink-600' : 'bg-red-100 text-red-600'
+          }`}>
+            {r.status === 'finished' ? 'Terminado' : 'Incidencia'}
+          </span>
+          {isAdmin && (
+            <button onClick={() => setConfirmDel(true)} className="text-[#8fa3b1] hover:text-red-500">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+      <p className="text-[#8fa3b1] text-xs">📅 Inicio: {fmtTime(r.startTime)}</p>
+      <p className="text-[#8fa3b1] text-xs">⏱ Duración: {fmtDuration(r.endTime - r.startTime)}</p>
+      <p className="text-[#8fa3b1] text-xs">🏭 {r.provider} — {r.product}</p>
+      {r.workers?.length > 0 && <p className="text-[#8fa3b1] text-xs">👷 {r.workers.join(', ')}</p>}
+
+      {confirmDel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white dark:bg-[#162050] rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={22} className="text-red-500 shrink-0" />
+              <p className="text-sm text-slate-700 dark:text-white">
+                ¿Eliminar descarga de {r.provider} en {r.naveName || r.naveId}? Esta acción no se puede deshacer.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmDel(false)} className="flex-1 rounded-xl py-2.5 text-sm font-semibold border border-[#8fa3b1]/40 text-[#8fa3b1]">Cancelar</button>
+              <button onClick={() => { onDelete(); setConfirmDel(false) }} className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#dc2626]">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
