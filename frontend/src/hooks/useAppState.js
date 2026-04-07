@@ -208,7 +208,7 @@ export function useAppState() {
     naves,     setNaves,
     providers, setProviders,
     adminCred, setAdminCred,
-    assignments,
+    assignments, setAssignments,
     records,
 
     // Acciones

@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
-import { LayoutDashboard, BarChart2, Settings, LogOut, Sun, Moon, PlusCircle } from 'lucide-react'
+import { LayoutDashboard, BarChart2, Settings, LogOut, Sun, Moon, PlusCircle, WifiOff } from 'lucide-react'
 
-import { useAppState }  from './hooks/useAppState'
-import LoginScreen      from './components/LoginScreen'
-import NaveCard         from './components/NaveCard'
-import NewDescarga      from './components/NewDescarga'
-import Analytics        from './components/Analytics'
-import SettingsPanel    from './components/SettingsPanel'
+import { useAppState }    from './hooks/useAppState'
+import { useRealtime }    from './hooks/useRealtime'
+import { useOnlineStatus } from './hooks/useOnlineStatus'
+import LoginScreen        from './components/LoginScreen'
+import NaveCard           from './components/NaveCard'
+import NewDescarga        from './components/NewDescarga'
+import Analytics          from './components/Analytics'
+import SettingsPanel      from './components/SettingsPanel'
+import ToastContainer     from './components/ToastContainer'
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Descargas' },
@@ -25,6 +28,7 @@ export default function App() {
     naves,     setNaves,
     providers, setProviders,
     adminCred, setAdminCred,
+    assignments, setAssignments,
     records,
     visibleAssignments,
     activeNaveIds,
@@ -39,6 +43,17 @@ export default function App() {
     editAssignment,
     editRecord,
   } = useAppState()
+
+  const online = useOnlineStatus()
+
+  const online = useOnlineStatus()
+
+  useRealtime({
+    session,
+    onNewAssignment: (a) => {
+      setAssignments((prev) => ({ ...prev, [a.naveId]: a }))
+    },
+  })
 
   // ── Pantalla de login ────────────────────────────────────────────────────
   if (!session) {
@@ -56,12 +71,20 @@ export default function App() {
   // ── App principal ────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#0d1b3e] flex flex-col">
+      <ToastContainer />
+
+      {!online && (
+        <div className="bg-yellow-400 text-yellow-900 text-xs font-semibold text-center py-2 px-4 animate-pulse">
+          Sin conexión a internet. Algunas funciones no están disponibles.
+        </div>
+      )}
 
       <AppHeader
         dark={dark}
         onToggleDark={() => setDark((d) => !d)}
         onLogout={logout}
         roleLabel={roleLabel}
+        online={online}
       />
 
       <main className="flex-1 overflow-y-auto p-4 pb-24 relative">
@@ -85,6 +108,7 @@ export default function App() {
               onIncident={reportIncident}
               onDelete={softDeleteAssignment}
               onEdit={editAssignment}
+              online={online}
             />
           )}
 
@@ -140,7 +164,7 @@ export default function App() {
 
 // ── Sub-componentes de layout ────────────────────────────────────────────────
 
-function AppHeader({ dark, onToggleDark, onLogout, roleLabel }) {
+function AppHeader({ dark, onToggleDark, onLogout, roleLabel, online }) {
   return (
     <header
       className="sticky top-0 z-30 shadow-lg flex items-center justify-between px-4 py-3"
@@ -150,25 +174,22 @@ function AppHeader({ dark, onToggleDark, onLogout, roleLabel }) {
         <img src="/logo.png" alt="MEGA CUP" className="h-10 w-auto drop-shadow" />
         <div>
           <p className="font-black text-white text-lg tracking-tight leading-none">MEGA CUP</p>
-          <p className="text-blue-200 text-[10px] leading-none">
-            {roleLabel}
-          </p>
+          <p className="text-blue-200 text-[10px] leading-none">{roleLabel}</p>
         </div>
       </div>
 
       <div className="flex items-center gap-1">
-        <button
-          onClick={onToggleDark}
-          aria-label="Cambiar tema"
-          className="p-2 rounded-full hover:bg-white/10 text-white/80"
-        >
+        {/* Chip online/offline */}
+        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold mr-1 ${
+          online ? 'bg-green-500/20 text-green-300' : 'bg-yellow-400/20 text-yellow-300'
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`} />
+          {online ? 'En línea' : 'Sin conexión'}
+        </div>
+        <button onClick={onToggleDark} aria-label="Cambiar tema" className="p-2 rounded-full hover:bg-white/10 text-white/80">
           {dark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
-        <button
-          onClick={onLogout}
-          aria-label="Cerrar sesión"
-          className="p-2 rounded-full hover:bg-white/10 text-white/80"
-        >
+        <button onClick={onLogout} aria-label="Cerrar sesión" className="p-2 rounded-full hover:bg-white/10 text-white/80">
           <LogOut size={18} />
         </button>
       </div>
@@ -176,13 +197,14 @@ function AppHeader({ dark, onToggleDark, onLogout, roleLabel }) {
   )
 }
 
-function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers, visibleAssignments, onNewDescarga, onFinish, onIncident, onDelete, onEdit }) {
+function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers, visibleAssignments, onNewDescarga, onFinish, onIncident, onDelete, onEdit, online }) {
   return (
     <div className="space-y-4">
       {isAdmin && (
         <button
           onClick={onNewDescarga}
-          className="w-full flex items-center justify-center gap-3 rounded-2xl py-4 text-white font-bold text-base shadow-lg active:scale-95 transition-transform"
+          disabled={!online}
+          className="w-full flex items-center justify-center gap-3 rounded-2xl py-4 text-white font-bold text-base shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}
         >
           <PlusCircle size={22} />
