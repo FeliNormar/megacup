@@ -7,6 +7,7 @@ import {
 import { Bar } from 'react-chartjs-2'
 import { avgMinutesByProvider, fmtTime, fmtDuration } from '../utils/time'
 import { Trash2, AlertTriangle } from 'lucide-react'
+import WeeklyAnalytics from './WeeklyAnalytics'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
@@ -63,6 +64,9 @@ export default function Analytics({ records = [], dark, isAdmin, onDeleteRecord,
 
   return (
     <div className="space-y-6 pb-8">
+      {/* Analítica semanal por días operativos */}
+      <WeeklyAnalytics records={records} dark={dark} />
+
       <div className="bg-white dark:bg-[#162050] rounded-2xl p-4 shadow border border-[#8fa3b1]/20">
         <Bar data={chartData} options={chartOptions} />
       </div>
