@@ -9,6 +9,7 @@ import {
 } from '../constants/defaults'
 import { supabase } from '../utils/supabase'
 import { loadSession, clearSession, hashPassword } from '../utils/auth'
+import { insertLog } from '../utils/auditLog'
 
 /**
  * useAppState — Estado global de la aplicación.
@@ -128,14 +129,10 @@ export function useAppState() {
   }
 
   const createDescarga = async (data) => {
-    const assignment = {
-      id:        uid(),
-      ...data,
-      startTime: Date.now(),
-      status:    'active',
-    }
+    const assignment = { id: uid(), ...data, startTime: Date.now(), status: 'active' }
     setAssignments((prev) => ({ ...prev, [data.naveId]: assignment }))
     await supabase.from('assignments').insert([assignment])
+    insertLog(assignment.id, session?.workerName || 'admin', 'creada')
   }
 
   const finishDescarga = async (naveId) => {
@@ -147,46 +144,49 @@ export function useAppState() {
     clearTimer(a.id)
     await supabase.from('assignments').delete().eq('id', a.id)
     await supabase.from('records').insert([record])
+    insertLog(a.id, session?.workerName || 'admin', 'finalizada')
   }
 
-  const reportIncident = async (naveId) => {
+  const reportIncident = async (naveId, fotoUrl = null) => {
     const a = assignments[naveId]
     if (!a) return
-    const record = { ...a, endTime: Date.now(), status: 'incident' }
+    const record = { ...a, endTime: Date.now(), status: 'incident', ...(fotoUrl ? { foto_url: fotoUrl } : {}) }
     setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
     setRecords((r) => [record, ...r])
     clearTimer(a.id)
     await supabase.from('assignments').delete().eq('id', a.id)
     await supabase.from('records').insert([record])
+    insertLog(a.id, session?.workerName || 'admin', 'incidencia')
   }
 
-  // Soft delete — nunca borra físicamente
   const softDeleteAssignment = async (naveId) => {
     const a = assignments[naveId]
     if (!a) return
     setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
     clearTimer(a.id)
     await supabase.from('assignments').update({ deleted_at: new Date().toISOString() }).eq('id', a.id)
+    insertLog(a.id, session?.workerName || 'admin', 'eliminada')
   }
 
   const softDeleteRecord = async (id) => {
     setRecords((prev) => prev.filter((r) => r.id !== id))
     await supabase.from('records').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    insertLog(id, session?.workerName || 'admin', 'eliminada')
   }
 
-  // Editar descarga activa
   const editAssignment = async (naveId, changes) => {
     const a = assignments[naveId]
     if (!a) return
     const updated = { ...a, ...changes }
     setAssignments((prev) => ({ ...prev, [naveId]: updated }))
     await supabase.from('assignments').update(changes).eq('id', a.id)
+    insertLog(a.id, session?.workerName || 'admin', 'editada', JSON.stringify(changes))
   }
 
-  // Editar registro del historial
   const editRecord = async (id, changes) => {
     setRecords((prev) => prev.map((r) => r.id === id ? { ...r, ...changes } : r))
     await supabase.from('records').update(changes).eq('id', id)
+    insertLog(id, session?.workerName || 'admin', 'editada', JSON.stringify(changes))
   }
 
   // ── Vistas derivadas ──────────────────────────────────────────────────────

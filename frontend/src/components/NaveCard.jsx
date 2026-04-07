@@ -1,17 +1,19 @@
 ﻿import { useState } from 'react'
-import { CheckCircle, AlertTriangle, Clock, Package, Truck, Users, Trash2, Pencil, X } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Clock, Package, Truck, Users, Trash2, Pencil, X, Camera } from 'lucide-react'
 import { useTimer } from '../hooks/useTimer'
 import { fmtElapsed } from '../utils/time'
+import { supabase } from '../utils/supabase'
 
 export default function NaveCard({ nave, assignment, isWorker, isAdmin, providers, workers, naves, onFinish, onIncident, onDelete, onEdit }) {
-  const [confirmAction, setConfirmAction] = useState(null)
-  const [showEdit,      setShowEdit]      = useState(false)
+  const [confirmAction,  setConfirmAction]  = useState(null)
+  const [showEdit,       setShowEdit]       = useState(false)
   const [showDelConfirm, setShowDelConfirm] = useState(false)
+  const [showIncident,   setShowIncident]   = useState(false)
   const elapsed = useTimer(assignment.id, assignment.startTime)
 
-  const handleConfirm = () => {
-    if (confirmAction === 'finish')   onFinish()
-    if (confirmAction === 'incident') onIncident()
+  const handleFinish = () => {
+    if ('vibrate' in navigator) navigator.vibrate([100, 50, 100])
+    onFinish()
     setConfirmAction(null)
   }
 
@@ -49,16 +51,14 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
 
       {!isWorker && (
         <div className="px-4 pb-4">
-          {confirmAction ? (
+          {confirmAction === 'finish' ? (
             <div className="flex gap-2">
               <button onClick={() => setConfirmAction(null)} className="flex-1 rounded-xl py-2.5 text-sm font-semibold border border-[#8fa3b1]/40 text-[#8fa3b1]">Cancelar</button>
-              <button onClick={handleConfirm} className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white ${confirmAction === 'finish' ? 'bg-[#ec4899]' : 'bg-[#dc2626]'}`}>
-                {confirmAction === 'finish' ? 'Confirmar fin' : 'Confirmar incidencia'}
-              </button>
+              <button onClick={handleFinish} className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#ec4899]">Confirmar fin</button>
             </div>
           ) : (
             <div className="flex gap-2">
-              <button onClick={() => setConfirmAction('incident')} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold border-2 border-[#dc2626] text-[#dc2626]">
+              <button onClick={() => setShowIncident(true)} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold border-2 border-[#dc2626] text-[#dc2626]">
                 <AlertTriangle size={15} /> Incidencia
               </button>
               <button onClick={() => setConfirmAction('finish')} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold text-white bg-[#ec4899]">
@@ -69,16 +69,14 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
         </div>
       )}
 
-      {/* Modal confirmar eliminar */}
       {showDelConfirm && (
         <ConfirmDeleteModal
-          message={`Esta descarga está en progreso. ¿Seguro que quieres eliminarla? Esta acción no se puede deshacer.`}
+          message="Esta descarga está en progreso. ¿Seguro que quieres eliminarla? Esta acción no se puede deshacer."
           onConfirm={() => { onDelete(); setShowDelConfirm(false) }}
           onCancel={() => setShowDelConfirm(false)}
         />
       )}
 
-      {/* Modal editar */}
       {showEdit && (
         <EditModal
           assignment={assignment}
@@ -87,6 +85,14 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
           naves={naves}
           onSave={(changes) => { onEdit(changes); setShowEdit(false) }}
           onClose={() => setShowEdit(false)}
+        />
+      )}
+
+      {showIncident && (
+        <IncidentModal
+          assignment={assignment}
+          onConfirm={(fotoUrl) => { onIncident(fotoUrl); setShowIncident(false) }}
+          onClose={() => setShowIncident(false)}
         />
       )}
     </div>
@@ -121,23 +127,86 @@ function ConfirmDeleteModal({ message, onConfirm, onCancel }) {
   )
 }
 
+function IncidentModal({ assignment, onConfirm, onClose }) {
+  const [foto,     setFoto]     = useState(null)
+  const [preview,  setPreview]  = useState(null)
+  const [uploading, setUploading] = useState(false)
+
+  const handleFile = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setFoto(file)
+    setPreview(URL.createObjectURL(file))
+  }
+
+  const handleConfirm = async () => {
+    let fotoUrl = null
+    if (foto) {
+      setUploading(true)
+      try {
+        const fileName = `${assignment.id}-${Date.now()}.jpg`
+        const { data, error } = await supabase.storage.from('incidencias').upload(fileName, foto)
+        if (!error && data) {
+          const { data: pub } = supabase.storage.from('incidencias').getPublicUrl(fileName)
+          fotoUrl = pub.publicUrl
+        }
+      } catch (err) {
+        console.error('Error subiendo foto:', err)
+      }
+      setUploading(false)
+    }
+    onConfirm(fotoUrl)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white dark:bg-[#162050] rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-base text-red-500">Registrar Incidencia</h3>
+          <button onClick={onClose}><X size={18} className="text-[#8fa3b1]" /></button>
+        </div>
+
+        {/* Foto opcional */}
+        <div>
+          <p className="text-xs text-[#8fa3b1] font-semibold uppercase mb-2">Foto (opcional)</p>
+          {preview ? (
+            <div className="relative inline-block">
+              <img src={preview} alt="preview" className="w-20 h-20 object-cover rounded-xl border border-[#8fa3b1]/30" />
+              <button onClick={() => { setFoto(null); setPreview(null) }}
+                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5">
+                <X size={11} />
+              </button>
+            </div>
+          ) : (
+            <label className="flex items-center gap-2 cursor-pointer w-fit px-3 py-2 rounded-xl border-2 border-dashed border-[#8fa3b1]/40 text-[#8fa3b1] text-xs hover:border-[#1a3a8f]">
+              <Camera size={15} />
+              Adjuntar foto
+              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+            </label>
+          )}
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} className="flex-1 rounded-xl py-2.5 text-sm font-semibold border border-[#8fa3b1]/40 text-[#8fa3b1]">Cancelar</button>
+          <button onClick={handleConfirm} disabled={uploading}
+            className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#dc2626] disabled:opacity-60">
+            {uploading ? 'Subiendo...' : 'Confirmar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function EditModal({ assignment, providers, workers, naves, onSave, onClose }) {
-  const [provider,  setProvider]  = useState(assignment.provider  || '')
-  const [product,   setProduct]   = useState(assignment.product   || '')
-  const [po,        setPo]        = useState(assignment.po        || '')
-  const [selWorkers, setSelWorkers] = useState(assignment.workers || [])
-  const [naveId,    setNaveId]    = useState(assignment.naveId    || '')
+  const [provider,   setProvider]   = useState(assignment.provider  || '')
+  const [product,    setProduct]    = useState(assignment.product   || '')
+  const [po,         setPo]         = useState(assignment.po        || '')
+  const [selWorkers, setSelWorkers] = useState(assignment.workers   || [])
+  const [naveId,     setNaveId]     = useState(assignment.naveId    || '')
 
-  const toggleWorker = (name) => {
-    setSelWorkers((prev) =>
-      prev.includes(name) ? prev.filter((w) => w !== name) : [...prev, name]
-    )
-  }
-
-  const handleSave = () => {
-    const changes = { provider, product, po, workers: selWorkers, naveId }
-    onSave(changes)
-  }
+  const toggleWorker = (name) =>
+    setSelWorkers((prev) => prev.includes(name) ? prev.filter((w) => w !== name) : [...prev, name])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -173,9 +242,7 @@ function EditModal({ assignment, providers, workers, naves, onSave, onClose }) {
           {(workers || []).map((w) => (
             <button key={w.id} onClick={() => toggleWorker(w.name)}
               className={`px-3 py-1 rounded-full text-xs font-semibold border-2 transition-colors ${
-                selWorkers.includes(w.name)
-                  ? 'bg-[#1a3a8f] border-[#1a3a8f] text-white'
-                  : 'border-[#8fa3b1]/40 text-[#8fa3b1]'
+                selWorkers.includes(w.name) ? 'bg-[#1a3a8f] border-[#1a3a8f] text-white' : 'border-[#8fa3b1]/40 text-[#8fa3b1]'
               }`}>
               {w.name}
             </button>
@@ -184,7 +251,8 @@ function EditModal({ assignment, providers, workers, naves, onSave, onClose }) {
 
         <div className="flex gap-2 pt-2">
           <button onClick={onClose} className="flex-1 rounded-xl py-2.5 text-sm font-semibold border border-[#8fa3b1]/40 text-[#8fa3b1]">Cancelar</button>
-          <button onClick={handleSave} className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#1a3a8f]">Guardar</button>
+          <button onClick={() => onSave({ provider, product, po, workers: selWorkers, naveId })}
+            className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#1a3a8f]">Guardar</button>
         </div>
       </div>
     </div>

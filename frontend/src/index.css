@@ -13,3 +13,36 @@
   .mc-gradient { background: linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%); }
   .mc-card { @apply bg-white dark:bg-[#162050] border border-[#8fa3b1]/30; }
 }
+
+/* ── Transiciones de pantalla ─────────────────────────────────────────────── */
+.page-enter {
+  opacity: 0;
+  transform: translateX(20px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+.page-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+.page-exit-active {
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+/* ── Landscape / tablet ───────────────────────────────────────────────────── */
+@media (orientation: landscape) and (min-width: 768px) {
+  .nave-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+}
+@media (min-width: 1024px) {
+  .nave-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+}
+
+/* ── Reducir movimiento ───────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .page-enter-active, .page-exit-active { transition: none; }
+}

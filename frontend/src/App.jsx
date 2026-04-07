@@ -10,6 +10,7 @@ import NewDescarga        from './components/NewDescarga'
 import Analytics          from './components/Analytics'
 import SettingsPanel      from './components/SettingsPanel'
 import ToastContainer     from './components/ToastContainer'
+import PageTransition     from './components/PageTransition'
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Descargas' },
@@ -94,6 +95,7 @@ export default function App() {
         </div>
 
         <div className="relative z-10">
+          <PageTransition tabKey={tab}>
           {tab === 'dashboard' && (
             <Dashboard
               isAdmin={isAdmin}
@@ -138,6 +140,7 @@ export default function App() {
               onUpdateAdmin={updateAdmin}
             />
           )}
+          </PageTransition>
         </div>
       </main>
 
@@ -215,7 +218,8 @@ function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers
       {visibleAssignments.length === 0 ? (
         <EmptyState isAdmin={isAdmin} isAlmacenista={isAlmacenista} />
       ) : (
-        visibleAssignments.map((a) => {
+        <div className="nave-grid space-y-4 sm:space-y-0">
+          {visibleAssignments.map((a) => {
           const nave = naves.find((n) => n.id === a.naveId) || { name: a.naveName || a.naveId }
           return (
             <NaveCard
@@ -228,12 +232,13 @@ function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers
               workers={workers}
               naves={naves}
               onFinish={() => onFinish(a.naveId)}
-              onIncident={() => onIncident(a.naveId)}
+              onIncident={(fotoUrl) => onIncident(a.naveId, fotoUrl)}
               onDelete={() => onDelete(a.naveId)}
               onEdit={(changes) => onEdit(a.naveId, changes)}
             />
           )
-        })
+        })}
+        </div>
       )}
     </div>
   )
