@@ -98,32 +98,64 @@ function WorkersList({ workers, onChange }) {
 
       {/* Lista */}
       {workers.map((w) => (
-        <div key={w.id} className="rounded-xl border border-[#8fa3b1]/20 p-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="font-semibold text-sm text-[#1a3a8f] dark:text-white">{w.name}</span>
-            <div className="flex gap-2">
-              <button onClick={() => { setEditId(editId === w.id ? null : w.id); setEditPwd('') }}
-                className="text-xs text-[#2563c4] dark:text-[#8fa3b1] underline">
-                {editId === w.id ? 'Cancelar' : 'Cambiar pwd'}
-              </button>
-              <button onClick={() => remove(w.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
-            </div>
-          </div>
-          <p className="text-xs text-[#8fa3b1]">Usuario: <span className="font-mono">{w.name}</span></p>
-
-          {editId === w.id && (
-            <div className="flex gap-2 mt-2">
-              <input type="password" value={editPwd} onChange={(e) => setEditPwd(e.target.value)}
-                placeholder="Nueva contraseña"
-                className="flex-1 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1.5 text-xs focus:border-[#1a3a8f] outline-none" />
-              <button onClick={() => saveEdit(w.id)}
-                className="px-3 rounded-lg bg-[#1a3a8f] text-white text-xs font-bold">
-                <Save size={13} />
-              </button>
-            </div>
-          )}
-        </div>
+        <WorkerRow key={w.id} w={w}
+          editId={editId} editPwd={editPwd}
+          setEditId={setEditId} setEditPwd={setEditPwd}
+          onRemove={remove} onSaveEdit={saveEdit}
+        />
       ))}
+    </div>
+  )
+}
+
+// ── Fila de operador con ver contraseña ──────────────────────────────────────
+function WorkerRow({ w, editId, editPwd, setEditId, setEditPwd, onRemove, onSaveEdit }) {
+  const [showCurrent, setShowCurrent] = useState(false)
+  const isHashed = (w.pwd || '').startsWith('$2')
+
+  return (
+    <div className="rounded-xl border border-[#8fa3b1]/20 p-3">
+      <div className="flex items-center justify-between mb-1">
+        <span className="font-semibold text-sm text-[#1a3a8f] dark:text-white">{w.name}</span>
+        <div className="flex gap-2 items-center">
+          <button onClick={() => { setEditId(editId === w.id ? null : w.id); setEditPwd('') }}
+            className="text-xs text-[#2563c4] dark:text-[#8fa3b1] underline">
+            {editId === w.id ? 'Cancelar' : 'Cambiar pwd'}
+          </button>
+          <button onClick={() => onRemove(w.id)} className="text-red-400 hover:text-red-600">
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* Contraseña actual */}
+      <div className="flex items-center gap-2 mt-1">
+        <span className="text-xs text-[#8fa3b1]">Contraseña:</span>
+        {isHashed ? (
+          <span className="text-xs text-[#8fa3b1] italic">cifrada (cambia para ver)</span>
+        ) : (
+          <span className="text-xs font-mono text-slate-700 dark:text-white">
+            {showCurrent ? (w.pwd || w.password) : '••••••'}
+          </span>
+        )}
+        {!isHashed && (
+          <button onClick={() => setShowCurrent((v) => !v)} className="text-[#8fa3b1] hover:text-white">
+            {showCurrent ? <EyeOff size={13} /> : <Eye size={13} />}
+          </button>
+        )}
+      </div>
+
+      {editId === w.id && (
+        <div className="flex gap-2 mt-2">
+          <input type="text" value={editPwd} onChange={(e) => setEditPwd(e.target.value)}
+            placeholder="Nueva contraseña"
+            className="flex-1 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1.5 text-xs focus:border-[#1a3a8f] outline-none" />
+          <button onClick={() => onSaveEdit(w.id)}
+            className="px-3 rounded-lg bg-[#1a3a8f] text-white text-xs font-bold">
+            <Save size={13} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
