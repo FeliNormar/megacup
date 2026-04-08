@@ -4,14 +4,15 @@ import QRScanner from './QRScanner'
 import { fmtDateTime } from '../utils/time'
 
 export default function NewDescarga({ naves, workers, providers, activeNaveIds, onSave, onClose }) {
-  const [naveId,      setNaveId]      = useState('')
-  const [provider,    setProvider]    = useState('')
-  const [product,     setProduct]     = useState('')
-  const [po,          setPo]          = useState('')
-  const [selected,    setSelected]    = useState([])
-  const [showQR,      setShowQR]      = useState(false)
-  const [tipoCarga,   setTipoCarga]   = useState('')
-  const [cajasEst,    setCajasEst]    = useState('')
+  const [naveId,        setNaveId]        = useState('')
+  const [provider,      setProvider]      = useState('')
+  const [product,       setProduct]       = useState('')
+  const [po,            setPo]            = useState('')
+  const [descargadores, setDescargadores] = useState([])
+  const [estibadores,   setEstibadores]   = useState([])
+  const [showQR,        setShowQR]        = useState(false)
+  const [tipoCarga,     setTipoCarga]     = useState('')
+  const [cajasEst,      setCajasEst]      = useState('')
 
   // Hora del dispositivo, se actualiza al abrir el modal
   const [deviceTime] = useState(() => Date.now())
@@ -20,8 +21,11 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
   const selProvider    = providers.find((p) => p.name === provider)
   const products       = selProvider?.products || []
 
-  const toggleWorker = (name) =>
-    setSelected((prev) => prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name])
+  const toggleDesc = (name) =>
+    setDescargadores((prev) => prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name])
+
+  const toggleEstib = (name) =>
+    setEstibadores((prev) => prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name])
 
   const handleQR = ({ provider: p, po: o, product: pr }) => {
     if (p)  setProvider(p)
@@ -30,18 +34,21 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
     setShowQR(false)
   }
 
-  const canSave = naveId && provider && product && selected.length > 0 && tipoCarga
+  const totalPersonal = [...new Set([...descargadores, ...estibadores])]
+  const canSave = naveId && provider && product && totalPersonal.length > 0 && tipoCarga
 
   const handleSave = () => {
     if (!canSave) return
     const nave = naves.find((n) => n.id === naveId)
     onSave({
       naveId,
-      naveName:   nave?.name || naveId,
+      naveName:      nave?.name || naveId,
       provider,
       product,
       po,
-      workers:    selected,
+      workers:       totalPersonal,
+      descargadores,
+      estibadores,
       tipoCarga,
       cajasEstimadas: cajasEst ? Number(cajasEst) : null,
     })
@@ -153,18 +160,18 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
               </div>
             </div>
 
-            {/* 5. Personal */}
+            {/* 5. Personal — Descargadores */}
             <div>
               <label className="block text-xs font-bold mb-2 text-[#1a3a8f] dark:text-[#8fa3b1] uppercase tracking-wide">
-                <Users size={12} className="inline mr-1" />Personal Asignado ({selected.length})
+                <Users size={12} className="inline mr-1" />Descargadores ({descargadores.length})
               </label>
               {workers.length === 0
-                ? <p className="text-sm text-gray-400 italic">No hay personal registrado. Agrégalo en Configuración.</p>
+                ? <p className="text-sm text-gray-400 italic">No hay personal registrado.</p>
                 : <div className="flex flex-wrap gap-2">
                     {workers.map((w) => (
-                      <button key={w.id} onClick={() => toggleWorker(w.name)}
+                      <button key={w.id} onClick={() => toggleDesc(w.name)}
                         className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition-colors ${
-                          selected.includes(w.name)
+                          descargadores.includes(w.name)
                             ? 'bg-[#1a3a8f] border-[#1a3a8f] text-white'
                             : 'border-[#8fa3b1]/40 dark:border-[#8fa3b1]/30 text-gray-700 dark:text-gray-300'
                         }`}>
@@ -173,6 +180,29 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
                     ))}
                   </div>
               }
+            </div>
+
+            {/* 5b. Estibadores */}
+            <div>
+              <label className="block text-xs font-bold mb-2 text-[#2563c4] dark:text-[#8fa3b1] uppercase tracking-wide">
+                🏗️ Estibadores ({estibadores.length})
+              </label>
+              {workers.length === 0
+                ? null
+                : <div className="flex flex-wrap gap-2">
+                    {workers.map((w) => (
+                      <button key={w.id} onClick={() => toggleEstib(w.name)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition-colors ${
+                          estibadores.includes(w.name)
+                            ? 'bg-[#2563c4] border-[#2563c4] text-white'
+                            : 'border-[#8fa3b1]/40 dark:border-[#8fa3b1]/30 text-gray-700 dark:text-gray-300'
+                        }`}>
+                        {w.name}
+                      </button>
+                    ))}
+                  </div>
+              }
+              <p className="text-xs text-[#8fa3b1] mt-1">Un operario puede estar en ambos roles.</p>
             </div>
 
             {/* 6. Tipo de carga */}
@@ -211,8 +241,7 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
               <p className="text-xs text-[#8fa3b1] text-center mb-2">
                 Selecciona nave, proveedor, producto, tipo de carga y al menos un operador
               </p>
-            )}
-            <button onClick={handleSave} disabled={!canSave}
+            )}            <button onClick={handleSave} disabled={!canSave}
               className="touch-target w-full rounded-xl text-white font-bold text-base py-4 disabled:opacity-40 active:scale-95 transition-transform"
               style={{ background: canSave ? 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' : undefined, backgroundColor: !canSave ? '#8fa3b1' : undefined }}>
               Iniciar Descarga

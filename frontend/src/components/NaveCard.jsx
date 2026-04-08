@@ -48,7 +48,13 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
         {assignment.po && <InfoRow icon={<Package size={14} />} label="PO" value={assignment.po} />}
         {assignment.tipoCarga && <InfoRow icon={<Package size={14} />} label="Tipo" value={assignment.tipoCarga} />}
         {assignment.cajasEstimadas && <InfoRow icon={<Package size={14} />} label="Cajas est." value={String(assignment.cajasEstimadas)} />}
-        {assignment.workers?.length > 0 && <InfoRow icon={<Users size={14} />} label="Personal" value={assignment.workers.join(', ')} />}
+        {assignment.descargadores?.length > 0
+          ? <InfoRow icon={<Users size={14} />} label="Descarga" value={assignment.descargadores.join(', ')} />
+          : assignment.workers?.length > 0 && <InfoRow icon={<Users size={14} />} label="Personal" value={assignment.workers.join(', ')} />
+        }
+        {assignment.estibadores?.length > 0 && (
+          <InfoRow icon={<Users size={14} />} label="Estiba" value={assignment.estibadores.join(', ')} />
+        )}
 
         {/* Botones WhatsApp — solo admin */}
         {isAdmin && assignment.workers?.length > 0 && (
@@ -330,6 +336,9 @@ function WhatsAppButtons({ assignment, workers }) {
   if (assigned.length === 0) return null
 
   const buildMsg = (workerName) => {
+    const esDesc  = (assignment.descargadores || []).includes(workerName)
+    const esEstib = (assignment.estibadores   || []).includes(workerName)
+    const rol = esDesc && esEstib ? 'Descargador + Estibador' : esDesc ? 'Descargador' : esEstib ? 'Estibador' : 'Operador'
     const lines = [
       `Buenos días ${workerName} 👋`,
       `Te han asignado un trailer:`,
@@ -339,7 +348,9 @@ function WhatsAppButtons({ assignment, workers }) {
       assignment.po ? `📋 PO: ${assignment.po}` : null,
       assignment.tipoCarga ? `⚖️ Tipo: ${assignment.tipoCarga}` : null,
       assignment.cajasEstimadas ? `📦 Cajas est.: ${assignment.cajasEstimadas}` : null,
-      `👥 Equipo: ${(assignment.workers || []).join(', ')}`,
+      `🎯 Tu rol: ${rol}`,
+      assignment.descargadores?.length > 0 ? `📥 Descargadores: ${assignment.descargadores.join(', ')}` : null,
+      assignment.estibadores?.length > 0   ? `🏗️ Estibadores: ${assignment.estibadores.join(', ')}` : null,
     ].filter(Boolean).join('\n')
     return encodeURIComponent(lines)
   }
