@@ -148,7 +148,12 @@ export function useAppState() {
 
   // Guarda workers en Supabase al cambiar — hashea contraseñas nuevas
   const updateWorkers = async (newWorkers) => {
-    // Hashear contraseñas que no estén hasheadas aún
+    // Protección: nunca borrar si el array viene vacío
+    if (!newWorkers || newWorkers.length === 0) {
+      setWorkers([])
+      ls.set('mc_workers', [])
+      return
+    }
     const hashed = await Promise.all(newWorkers.map(async (w) => {
       if (w.pwd && !w.pwd.startsWith('$2')) {
         return { ...w, pwd: await hashPassword(w.pwd) }
@@ -159,10 +164,8 @@ export function useAppState() {
     ls.set('mc_workers', hashed)
     try {
       await supabase.from('workers').delete().neq('id', '')
-      if (hashed.length > 0) {
-        const { error } = await supabase.from('workers').insert(hashed)
-        if (error) console.error('Error guardando workers:', error)
-      }
+      const { error } = await supabase.from('workers').insert(hashed)
+      if (error) console.error('Error guardando workers:', error)
     } catch (err) {
       console.error('Error sync workers:', err)
     }
