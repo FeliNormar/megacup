@@ -24,9 +24,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
-            urlPattern: /\/api\/.*/i,
+            urlPattern: /^https:\/\/megacup-api\.onrender\.com\/api\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -43,8 +45,7 @@ export default defineConfig({
     }
   },
   // En producción el frontend llama directo al backend de Render
-  // Configura VITE_API_URL en las variables de entorno de Vercel
   define: {
-    __API_URL__: JSON.stringify(process.env.VITE_API_URL || '')
+    __API_URL__: JSON.stringify(process.env.VITE_API_URL || 'https://megacup-api.onrender.com')
   }
 })

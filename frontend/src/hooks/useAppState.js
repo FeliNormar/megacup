@@ -12,7 +12,7 @@ import { loadSession, clearSession, hashPassword } from '../utils/auth'
 import { insertLog } from '../utils/auditLog'
 
 // Versión del caché — incrementar cuando haya cambios de esquema
-const CACHE_VERSION = '2'
+const CACHE_VERSION = '3'
 
 function clearObsoleteCache() {
   try {
