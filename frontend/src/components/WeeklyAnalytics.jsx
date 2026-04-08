@@ -56,7 +56,14 @@ export default function WeeklyAnalytics({ records = [], dark }) {
   }, [operativos])
 
   const diasOrdenados = useMemo(() =>
-    [...diasActivosOrdenados()].sort((a, b) => a.dayIndex - b.dayIndex)
+    Object.values({
+      1: { dayIndex: 1, label: 'Lun', activo: true },
+      2: { dayIndex: 2, label: 'Mar', activo: true },
+      3: { dayIndex: 3, label: 'Mié', activo: true },
+      4: { dayIndex: 4, label: 'Jue', activo: true },
+      5: { dayIndex: 5, label: 'Vie', activo: true },
+      6: { dayIndex: 6, label: 'Sáb', activo: true },
+    })
   , [])
 
   // Datos para la gráfica — semanas en orden cronológico, días en orden Lun→Sáb
