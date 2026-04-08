@@ -73,6 +73,9 @@ function WorkersList({ workers, onChange }) {
     setEditId(null); setEditPwd('')
   }
 
+  const updatePhone = (id, phone) =>
+    onChange(workers.map((w) => w.id === id ? { ...w, phone } : w))
+
   return (
     <div className="space-y-3">
       {/* Agregar */}
@@ -102,6 +105,7 @@ function WorkersList({ workers, onChange }) {
           editId={editId} editPwd={editPwd}
           setEditId={setEditId} setEditPwd={setEditPwd}
           onRemove={remove} onSaveEdit={saveEdit}
+          onUpdatePhone={updatePhone}
         />
       ))}
     </div>
@@ -109,9 +113,16 @@ function WorkersList({ workers, onChange }) {
 }
 
 // ── Fila de operador con ver contraseña ──────────────────────────────────────
-function WorkerRow({ w, editId, editPwd, setEditId, setEditPwd, onRemove, onSaveEdit }) {
+function WorkerRow({ w, editId, editPwd, setEditId, setEditPwd, onRemove, onSaveEdit, onUpdatePhone }) {
   const [showCurrent, setShowCurrent] = useState(false)
+  const [editPhone,   setEditPhone]   = useState(false)
+  const [phone,       setPhone]       = useState(w.phone || '')
   const isHashed = (w.pwd || '').startsWith('$2')
+
+  const savePhone = () => {
+    onUpdatePhone(w.id, phone.trim())
+    setEditPhone(false)
+  }
 
   return (
     <div className="rounded-xl border border-[#8fa3b1]/20 p-3">
@@ -142,6 +153,29 @@ function WorkerRow({ w, editId, editPwd, setEditId, setEditPwd, onRemove, onSave
           <button onClick={() => setShowCurrent((v) => !v)} className="text-[#8fa3b1] hover:text-white">
             {showCurrent ? <EyeOff size={13} /> : <Eye size={13} />}
           </button>
+        )}
+      </div>
+
+      {/* Teléfono WhatsApp */}
+      <div className="flex items-center gap-2 mt-1">
+        <span className="text-xs text-[#8fa3b1]">WhatsApp:</span>
+        {editPhone ? (
+          <div className="flex gap-1 flex-1">
+            <input
+              type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+              placeholder="521XXXXXXXXXX"
+              className="flex-1 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs focus:border-[#1a3a8f] outline-none"
+            />
+            <button onClick={savePhone} className="px-2 rounded-lg bg-[#1a3a8f] text-white text-xs"><Save size={12} /></button>
+            <button onClick={() => setEditPhone(false)} className="text-[#8fa3b1] text-xs">✕</button>
+          </div>
+        ) : (
+          <>
+            <span className="text-xs font-mono text-slate-700 dark:text-white">{w.phone || '—'}</span>
+            <button onClick={() => setEditPhone(true)} className="text-xs text-[#2563c4] dark:text-[#8fa3b1] underline">
+              {w.phone ? 'Editar' : 'Agregar'}
+            </button>
+          </>
         )}
       </div>
 
