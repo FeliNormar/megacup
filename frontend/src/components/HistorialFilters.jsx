@@ -149,7 +149,7 @@ export default function HistorialFilters({ records = [], naves = [], workers = [
         : <>
             <div className="space-y-2">
               {paginated.map((r) => (
-                <HistorialRow key={r.id} record={r} search={search} isAdmin={isAdmin} onDelete={() => onDelete(r.id)} onEditCajas={onEditCajas} />
+                <HistorialRow key={r.id} record={r} search={search} isAdmin={isAdmin} onDelete={() => onDelete(r.id)} onEditCajas={onEditCajas} workers={workers} />
               ))}
             </div>
             {hasMore && (
@@ -174,16 +174,23 @@ function FilterSelect({ value, onChange, placeholder, children }) {
   )
 }
 
-function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas }) {
+function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, workers = [] }) {
   const [confirmDel, setConfirmDel] = useState(false)
   const [editCajas,  setEditCajas]  = useState(false)
   const [cajasEst,   setCajasEst]   = useState(r.cajasEstimadas || r.cajas_estimadas || '')
   const [cajasReal,  setCajasReal]  = useState(r.cajasReales    || r.cajas_reales    || '')
+  const [descarg,    setDescarg]    = useState(r.descargadores  || [])
+  const [estib,      setEstib]      = useState(r.estibadores    || [])
+
+  const toggleDescarg = (name) => setDescarg((p) => p.includes(name) ? p.filter((x) => x !== name) : [...p, name])
+  const toggleEstib   = (name) => setEstib((p)   => p.includes(name) ? p.filter((x) => x !== name) : [...p, name])
 
   const saveCajas = () => {
     onEditCajas(r.id, {
-      cajasEstimadas: cajasEst ? Number(cajasEst) : null,
+      cajasEstimadas: cajasEst  ? Number(cajasEst)  : null,
       cajasReales:    cajasReal ? Number(cajasReal) : null,
+      descargadores:  descarg,
+      estibadores:    estib,
     })
     setEditCajas(false)
   }
@@ -216,27 +223,63 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas }) {
 
       {/* Cajas */}
       {!editCajas ? (
-        <div className="flex items-center gap-3 mt-1">
-          {(r.cajasEstimadas || r.cajas_estimadas) && (
+        <div className="flex items-center gap-3 mt-1 flex-wrap">
+          {(r.cajasEstimadas || r.cajas_estimadas) ? (
             <span className="text-xs text-[#8fa3b1]">Est: <span className="font-semibold text-slate-700 dark:text-white">{r.cajasEstimadas || r.cajas_estimadas}</span></span>
-          )}
-          {(r.cajasReales || r.cajas_reales) && (
+          ) : null}
+          {(r.cajasReales || r.cajas_reales) ? (
             <span className="text-xs text-[#8fa3b1]">Real: <span className="font-semibold text-slate-700 dark:text-white">{r.cajasReales || r.cajas_reales}</span></span>
+          ) : null}
+          {r.descargadores?.length > 0 && (
+            <span className="text-xs text-[#8fa3b1]">📥 {r.descargadores.join(', ')}</span>
+          )}
+          {r.estibadores?.length > 0 && (
+            <span className="text-xs text-[#8fa3b1]">🏗️ {r.estibadores.join(', ')}</span>
           )}
           {isAdmin && (
             <button onClick={() => setEditCajas(true)} className="text-xs text-[#2563c4] underline">
-              {(r.cajasEstimadas || r.cajasReales || r.cajas_estimadas || r.cajas_reales) ? 'Editar cajas' : '+ Agregar cajas'}
+              Editar
             </button>
           )}
         </div>
       ) : (
-        <div className="flex gap-2 mt-2 items-center flex-wrap">
-          <input type="number" value={cajasEst} onChange={(e) => setCajasEst(e.target.value)}
-            placeholder="Est." className="w-20 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
-          <input type="number" value={cajasReal} onChange={(e) => setCajasReal(e.target.value)}
-            placeholder="Real" className="w-20 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
-          <button onClick={saveCajas} className="px-3 py-1 rounded-lg bg-[#1a3a8f] text-white text-xs font-bold">Guardar</button>
-          <button onClick={() => setEditCajas(false)} className="text-xs text-[#8fa3b1]">Cancelar</button>
+        <div className="mt-2 space-y-2">
+          <div className="flex gap-2 items-center flex-wrap">
+            <input type="number" value={cajasEst} onChange={(e) => setCajasEst(e.target.value)}
+              placeholder="Cajas est." className="w-24 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+            <input type="number" value={cajasReal} onChange={(e) => setCajasReal(e.target.value)}
+              placeholder="Cajas real" className="w-24 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+          </div>
+          {workers.length > 0 && (
+            <>
+              <p className="text-xs text-[#8fa3b1] font-semibold">📥 Descargadores:</p>
+              <div className="flex flex-wrap gap-1">
+                {workers.map((w) => (
+                  <button key={w.id || w.name} onClick={() => toggleDescarg(w.name)}
+                    className={`px-2 py-1 rounded-full text-xs border transition-colors ${
+                      descarg.includes(w.name) ? 'bg-[#1a3a8f] border-[#1a3a8f] text-white' : 'border-[#8fa3b1]/40 text-[#8fa3b1]'
+                    }`}>
+                    {w.name}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-[#8fa3b1] font-semibold">🏗️ Estibadores:</p>
+              <div className="flex flex-wrap gap-1">
+                {workers.map((w) => (
+                  <button key={w.id || w.name} onClick={() => toggleEstib(w.name)}
+                    className={`px-2 py-1 rounded-full text-xs border transition-colors ${
+                      estib.includes(w.name) ? 'bg-[#2563c4] border-[#2563c4] text-white' : 'border-[#8fa3b1]/40 text-[#8fa3b1]'
+                    }`}>
+                    {w.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="flex gap-2">
+            <button onClick={saveCajas} className="px-3 py-1 rounded-lg bg-[#1a3a8f] text-white text-xs font-bold">Guardar</button>
+            <button onClick={() => setEditCajas(false)} className="text-xs text-[#8fa3b1]">Cancelar</button>
+          </div>
         </div>
       )}
 
