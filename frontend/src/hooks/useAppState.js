@@ -34,38 +34,30 @@ export function useAppState() {
   const [providers, setProviders] = useState(() => ls.get('mc_providers', DEFAULT_PROVIDERS))
   const [adminCred, setAdminCred] = useState(() => ls.get('mc_admin',     DEFAULT_ADMIN))
 
-  const [assignments, setAssignments] = useState(() => {
-    const saved = ls.get('mc_assignments', {})
-    Object.values(saved).forEach((a) => {
-      if (a.status === 'active' && !a.startTime) {
-        const recovered = recoverTimer(a.id)
-        if (recovered) a.startTime = recovered
-      }
-    })
-    return saved
-  })
+  const [assignments, setAssignments] = useState({})
   const [records, setRecords] = useState(() => ls.get('mc_records', []))
 
   // ── Sincronización Inicial con Supabase ────────────────────────────────────
   useEffect(() => {
     async function fetchData() {
       try {
-        // Cargar descargas activas
         const { data: activeData } = await supabase.from('assignments').select('*').eq('status', 'active').is('deleted_at', null)
-        if (activeData && activeData.length > 0) {
+        if (activeData) {
           const map = {}
           activeData.forEach(a => map[a.naveId] = a)
           setAssignments(map)
+          ls.set('mc_assignments', map)
+        } else {
+          setAssignments({})
+          ls.set('mc_assignments', {})
         }
         const { data: recordsData } = await supabase.from('records').select('*').is('deleted_at', null).order('endTime', { ascending: false }).limit(100)
         if (recordsData && recordsData.length > 0) setRecords(recordsData)
-        // Cargar workers
         const { data: workersData } = await supabase.from('workers').select('*')
         if (workersData && workersData.length > 0) {
           setWorkers(workersData)
           ls.set('mc_workers', workersData)
         }
-        // Cargar credenciales admin
         const { data: adminData } = await supabase.from('config').select('value').eq('key', 'admin').single()
         if (adminData?.value) {
           setAdminCred(adminData.value)
@@ -76,6 +68,39 @@ export function useAppState() {
       }
     }
     fetchData()
+
+    // ── Realtime: sincronizar assignments en todos los dispositivos ──────────
+    const channel = supabase
+      .channel('assignments-sync')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'assignments' }, (payload) => {
+        const a = payload.new
+        if (a.deleted_at || a.status !== 'active') return
+        setAssignments((prev) => ({ ...prev, [a.naveId]: a }))
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'assignments' }, (payload) => {
+        const a = payload.new
+        setAssignments((prev) => {
+          const next = { ...prev }
+          if (a.deleted_at || a.status !== 'active') {
+            // Buscar y eliminar por id
+            Object.keys(next).forEach((k) => { if (next[k].id === a.id) delete next[k] })
+          } else {
+            next[a.naveId] = a
+          }
+          return next
+        })
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'assignments' }, (payload) => {
+        const id = payload.old?.id
+        setAssignments((prev) => {
+          const next = { ...prev }
+          Object.keys(next).forEach((k) => { if (next[k].id === id) delete next[k] })
+          return next
+        })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   // ── Persistencia automática ───────────────────────────────────────────────
