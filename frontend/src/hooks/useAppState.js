@@ -262,12 +262,37 @@ export function useAppState() {
   const reportIncident = async (naveId, fotoUrl = null) => {
     const a = assignments[naveId]
     if (!a) return
-    const record = { ...a, endTime: Date.now(), status: 'incident', ...(fotoUrl ? { foto_url: fotoUrl } : {}) }
+    const record = {
+      ...a,
+      endTime: Date.now(),
+      status:  'incident',
+      ...(fotoUrl ? { foto_url: fotoUrl } : {}),
+    }
     setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
     setRecords((r) => [record, ...r])
     clearTimer(a.id)
     await supabase.from('assignments').delete().eq('id', a.id)
-    await supabase.from('records').insert([record])
+
+    // Mapear a snake_case para Supabase
+    const row = {
+      id:           record.id,
+      naveId:       record.naveId,
+      naveName:     record.naveName,
+      provider:     record.provider,
+      product:      record.product,
+      po:           record.po || null,
+      workers:      record.workers || [],
+      descargadores: record.descargadores || [],
+      estibadores:  record.estibadores || [],
+      startTime:    record.startTime,
+      endTime:      record.endTime,
+      status:       'incident',
+      tipo_carga:   record.tipoCarga || record.tipo_carga || null,
+      cajas_estimadas: record.cajasEstimadas || record.cajas_estimadas || null,
+      ...(fotoUrl ? { foto_url: fotoUrl } : {}),
+    }
+    const { error } = await supabase.from('records').insert([row])
+    if (error) console.error('Error guardando incidencia:', error)
     insertLog(a.id, session?.workerName || 'admin', 'incidencia')
   }
 
@@ -301,7 +326,26 @@ export function useAppState() {
 
   const editRecord = async (id, changes) => {
     setRecords((prev) => prev.map((r) => r.id === id ? { ...r, ...changes } : r))
-    await supabase.from('records').update(changes).eq('id', id)
+    // Mapear a snake_case para Supabase
+    const supabaseChanges = {}
+    if (changes.cajasEstimadas  !== undefined) supabaseChanges.cajas_estimadas     = changes.cajasEstimadas
+    if (changes.cajasReales     !== undefined) supabaseChanges.cajas_reales        = changes.cajasReales
+    if (changes.cajasXDescargador !== undefined) supabaseChanges.cajas_x_descargador = changes.cajasXDescargador
+    if (changes.cajasXEstibador !== undefined) supabaseChanges.cajas_x_estibador   = changes.cajasXEstibador
+    if (changes.descargadores   !== undefined) supabaseChanges.descargadores       = changes.descargadores
+    if (changes.estibadores     !== undefined) supabaseChanges.estibadores         = changes.estibadores
+    if (changes.tipoCarga       !== undefined) supabaseChanges.tipo_carga          = changes.tipoCarga
+    if (changes.provider        !== undefined) supabaseChanges.provider            = changes.provider
+    if (changes.product         !== undefined) supabaseChanges.product             = changes.product
+    if (changes.po              !== undefined) supabaseChanges.po                  = changes.po
+    if (changes.workers         !== undefined) supabaseChanges.workers             = changes.workers
+    // Campos que ya vienen en snake_case desde HistorialFilters
+    if (changes.cajas_estimadas     !== undefined) supabaseChanges.cajas_estimadas     = changes.cajas_estimadas
+    if (changes.cajas_reales        !== undefined) supabaseChanges.cajas_reales        = changes.cajas_reales
+    if (changes.cajas_x_descargador !== undefined) supabaseChanges.cajas_x_descargador = changes.cajas_x_descargador
+    if (changes.cajas_x_estibador   !== undefined) supabaseChanges.cajas_x_estibador   = changes.cajas_x_estibador
+    const { error } = await supabase.from('records').update(supabaseChanges).eq('id', id)
+    if (error) console.error('Error editando record:', error)
     insertLog(id, session?.workerName || 'admin', 'editada', JSON.stringify(changes))
   }
 
