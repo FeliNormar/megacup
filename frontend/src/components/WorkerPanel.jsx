@@ -27,6 +27,10 @@ export default function WorkerPanel({ records = [], workerName }) {
     const esEstib = r.estibadores?.includes(workerName)
     if (esDesc  && r.cajasXDescargador) return acc + r.cajasXDescargador
     if (esEstib && r.cajasXEstibador)   return acc + r.cajasXEstibador
+    // Fallback: si no tiene roles específicos pero tiene cajas reales, divide entre todos
+    if (!esDesc && !esEstib && r.cajasReales && r.workers?.length > 0) {
+      return acc + Math.round(r.cajasReales / r.workers.length)
+    }
     return acc
   }, 0)
 
@@ -63,6 +67,8 @@ export default function WorkerPanel({ records = [], workerName }) {
                               : 'Operador'
                 const cajas   = esDesc  && r.cajasXDescargador ? r.cajasXDescargador
                               : esEstib && r.cajasXEstibador   ? r.cajasXEstibador
+                              : (!esDesc && !esEstib && r.cajasReales && r.workers?.length > 0)
+                                ? Math.round(r.cajasReales / r.workers.length)
                               : null
 
                 return (

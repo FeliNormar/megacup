@@ -24,11 +24,8 @@ export function useRealtime({ session, onNewAssignment }) {
         // Vibración
         if ('vibrate' in navigator) navigator.vibrate([200, 100, 200])
 
-        // Toast
+        // Toast — solo notificación visual, el estado lo maneja useAppState Realtime
         toast(`Nueva descarga asignada — Nave ${a.naveName || a.naveId} · ${a.provider || ''}`)
-
-        // Actualizar estado
-        if (onNewAssignment) onNewAssignment(a)
       })
       .subscribe()
 
