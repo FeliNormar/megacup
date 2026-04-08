@@ -4,7 +4,7 @@ import App from './App'
 import './index.css'
 
 // ── Limpieza de service worker y caché al actualizar ─────────────────────────
-const APP_VERSION = '1.0.8' // incrementar en cada deploy importante
+const APP_VERSION = '1.0.9' // incrementar en cada deploy importante
 
 async function clearAndReload() {
   try {
