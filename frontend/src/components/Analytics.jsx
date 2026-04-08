@@ -101,6 +101,7 @@ export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, 
           isAdmin={isAdmin}
           isAlmacenista={isAlmacenista}
           onDelete={onDeleteRecord}
+          onEditCajas={onEditRecord}
         />
       </div>
     </div>

@@ -27,7 +27,7 @@ function highlight(text, query) {
   )
 }
 
-export default function HistorialFilters({ records = [], naves = [], workers = [], providers = [], isAdmin, isAlmacenista, onDelete }) {
+export default function HistorialFilters({ records = [], naves = [], workers = [], providers = [], isAdmin, isAlmacenista, onDelete, onEditCajas }) {
   const [desde,      setDesde]      = useState('')
   const [hasta,      setHasta]      = useState('')
   const [filtWorker, setFiltWorker] = useState('')
@@ -149,7 +149,7 @@ export default function HistorialFilters({ records = [], naves = [], workers = [
         : <>
             <div className="space-y-2">
               {paginated.map((r) => (
-                <HistorialRow key={r.id} record={r} search={search} isAdmin={isAdmin} onDelete={() => onDelete(r.id)} />
+                <HistorialRow key={r.id} record={r} search={search} isAdmin={isAdmin} onDelete={() => onDelete(r.id)} onEditCajas={onEditCajas} />
               ))}
             </div>
             {hasMore && (
@@ -174,8 +174,19 @@ function FilterSelect({ value, onChange, placeholder, children }) {
   )
 }
 
-function HistorialRow({ record: r, search, isAdmin, onDelete }) {
+function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas }) {
   const [confirmDel, setConfirmDel] = useState(false)
+  const [editCajas,  setEditCajas]  = useState(false)
+  const [cajasEst,   setCajasEst]   = useState(r.cajasEstimadas || r.cajas_estimadas || '')
+  const [cajasReal,  setCajasReal]  = useState(r.cajasReales    || r.cajas_reales    || '')
+
+  const saveCajas = () => {
+    onEditCajas(r.id, {
+      cajasEstimadas: cajasEst ? Number(cajasEst) : null,
+      cajasReales:    cajasReal ? Number(cajasReal) : null,
+    })
+    setEditCajas(false)
+  }
   return (
     <div className="rounded-xl border border-[#8fa3b1]/20 p-3 text-sm bg-white dark:bg-[#162050]">
       <div className="flex items-center justify-between mb-1">
@@ -201,6 +212,32 @@ function HistorialRow({ record: r, search, isAdmin, onDelete }) {
         <p className="text-[#8fa3b1] text-xs">👷 {r.workers.map((w, i) => (
           <span key={i}>{i > 0 && ', '}{highlight(w, search)}</span>
         ))}</p>
+      )}
+
+      {/* Cajas */}
+      {!editCajas ? (
+        <div className="flex items-center gap-3 mt-1">
+          {(r.cajasEstimadas || r.cajas_estimadas) && (
+            <span className="text-xs text-[#8fa3b1]">Est: <span className="font-semibold text-slate-700 dark:text-white">{r.cajasEstimadas || r.cajas_estimadas}</span></span>
+          )}
+          {(r.cajasReales || r.cajas_reales) && (
+            <span className="text-xs text-[#8fa3b1]">Real: <span className="font-semibold text-slate-700 dark:text-white">{r.cajasReales || r.cajas_reales}</span></span>
+          )}
+          {isAdmin && (
+            <button onClick={() => setEditCajas(true)} className="text-xs text-[#2563c4] underline">
+              {(r.cajasEstimadas || r.cajasReales || r.cajas_estimadas || r.cajas_reales) ? 'Editar cajas' : '+ Agregar cajas'}
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex gap-2 mt-2 items-center flex-wrap">
+          <input type="number" value={cajasEst} onChange={(e) => setCajasEst(e.target.value)}
+            placeholder="Est." className="w-20 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+          <input type="number" value={cajasReal} onChange={(e) => setCajasReal(e.target.value)}
+            placeholder="Real" className="w-20 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+          <button onClick={saveCajas} className="px-3 py-1 rounded-lg bg-[#1a3a8f] text-white text-xs font-bold">Guardar</button>
+          <button onClick={() => setEditCajas(false)} className="text-xs text-[#8fa3b1]">Cancelar</button>
+        </div>
       )}
 
       {confirmDel && (

@@ -11,6 +11,28 @@ import { supabase } from '../utils/supabase'
 import { loadSession, clearSession, hashPassword } from '../utils/auth'
 import { insertLog } from '../utils/auditLog'
 
+// Versión del caché — incrementar cuando haya cambios de esquema
+const CACHE_VERSION = '2'
+
+function clearObsoleteCache() {
+  try {
+    const v = localStorage.getItem('mc_cache_version')
+    if (v !== CACHE_VERSION) {
+      // Limpiar solo cachés locales, nunca datos de sesión
+      ;['mc_assignments', 'mc_records', 'mc_workers', 'mc_naves', 'mc_providers'].forEach(
+        (k) => localStorage.removeItem(k)
+      )
+      // Limpiar timers huérfanos
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('app_timer_'))
+        .forEach((k) => localStorage.removeItem(k))
+      localStorage.setItem('mc_cache_version', CACHE_VERSION)
+    }
+  } catch (_) {}
+}
+
+clearObsoleteCache()
+
 /**
  * useAppState — Estado global de la aplicación.
  *
