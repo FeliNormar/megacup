@@ -4,12 +4,14 @@ import QRScanner from './QRScanner'
 import { fmtDateTime } from '../utils/time'
 
 export default function NewDescarga({ naves, workers, providers, activeNaveIds, onSave, onClose }) {
-  const [naveId,   setNaveId]   = useState('')
-  const [provider, setProvider] = useState('')
-  const [product,  setProduct]  = useState('')
-  const [po,       setPo]       = useState('')
-  const [selected, setSelected] = useState([])
-  const [showQR,   setShowQR]   = useState(false)
+  const [naveId,      setNaveId]      = useState('')
+  const [provider,    setProvider]    = useState('')
+  const [product,     setProduct]     = useState('')
+  const [po,          setPo]          = useState('')
+  const [selected,    setSelected]    = useState([])
+  const [showQR,      setShowQR]      = useState(false)
+  const [tipoCarga,   setTipoCarga]   = useState('')
+  const [cajasEst,    setCajasEst]    = useState('')
 
   // Hora del dispositivo, se actualiza al abrir el modal
   const [deviceTime] = useState(() => Date.now())
@@ -28,19 +30,20 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
     setShowQR(false)
   }
 
-  const canSave = naveId && provider && product && selected.length > 0
+  const canSave = naveId && provider && product && selected.length > 0 && tipoCarga
 
   const handleSave = () => {
     if (!canSave) return
     const nave = naves.find((n) => n.id === naveId)
     onSave({
       naveId,
-      naveName: nave?.name || naveId,
+      naveName:   nave?.name || naveId,
       provider,
       product,
       po,
-      workers: selected,
-      // La hora se registra en App.jsx con Date.now() en el momento exacto de confirmar
+      workers:    selected,
+      tipoCarga,
+      cajasEstimadas: cajasEst ? Number(cajasEst) : null,
     })
   }
 
@@ -171,13 +174,42 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
                   </div>
               }
             </div>
+
+            {/* 6. Tipo de carga */}
+            <div>
+              <label className="block text-xs font-bold mb-2 text-[#1a3a8f] dark:text-[#8fa3b1] uppercase tracking-wide">
+                Tipo de Carga
+              </label>
+              <div className="flex gap-2">
+                {['Ligero', 'Semi pesado', 'Pesado'].map((t) => (
+                  <button key={t} onClick={() => setTipoCarga(t)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-semibold border-2 transition-colors ${
+                      tipoCarga === t
+                        ? 'bg-[#1a3a8f] border-[#1a3a8f] text-white'
+                        : 'border-[#8fa3b1]/40 text-gray-700 dark:text-gray-300'
+                    }`}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 7. Cajas estimadas */}
+            <div>
+              <label className="block text-xs font-bold mb-2 text-[#1a3a8f] dark:text-[#8fa3b1] uppercase tracking-wide">
+                Cajas Estimadas — opcional
+              </label>
+              <input type="number" min="0" value={cajasEst} onChange={(e) => setCajasEst(e.target.value)}
+                placeholder="Ej. 200"
+                className="w-full rounded-xl border-2 border-[#8fa3b1]/40 dark:border-[#8fa3b1]/30 bg-transparent px-4 py-3 text-sm focus:border-[#1a3a8f] outline-none" />
+            </div>
           </div>
 
           {/* Footer fijo */}
           <div className="px-5 pb-6 pt-3 border-t border-[#8fa3b1]/20 shrink-0">
             {!canSave && (
               <p className="text-xs text-[#8fa3b1] text-center mb-2">
-                Selecciona nave, proveedor, producto y al menos un operador
+                Selecciona nave, proveedor, producto, tipo de carga y al menos un operador
               </p>
             )}
             <button onClick={handleSave} disabled={!canSave}

@@ -9,11 +9,12 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
   const [showEdit,       setShowEdit]       = useState(false)
   const [showDelConfirm, setShowDelConfirm] = useState(false)
   const [showIncident,   setShowIncident]   = useState(false)
+  const [showFinish,     setShowFinish]     = useState(false)
   const elapsed = useTimer(assignment.id, assignment.startTime)
 
-  const handleFinish = () => {
+  const handleFinish = (cajasReales) => {
     if ('vibrate' in navigator) navigator.vibrate([100, 50, 100])
-    onFinish()
+    onFinish(cajasReales)
     setConfirmAction(null)
   }
 
@@ -54,7 +55,7 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
           {confirmAction === 'finish' ? (
             <div className="flex gap-2">
               <button onClick={() => setConfirmAction(null)} className="flex-1 rounded-xl py-2.5 text-sm font-semibold border border-[#8fa3b1]/40 text-[#8fa3b1]">Cancelar</button>
-              <button onClick={handleFinish} className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#ec4899]">Confirmar fin</button>
+              <button onClick={() => setShowFinish(true)} className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#ec4899]">Confirmar fin</button>
             </div>
           ) : (
             <div className="flex gap-2">
@@ -93,6 +94,14 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
           assignment={assignment}
           onConfirm={(fotoUrl) => { onIncident(fotoUrl); setShowIncident(false) }}
           onClose={() => setShowIncident(false)}
+        />
+      )}
+
+      {showFinish && (
+        <FinishModal
+          assignment={assignment}
+          onConfirm={(cajasReales) => { handleFinish(cajasReales); setShowFinish(false) }}
+          onClose={() => { setShowFinish(false); setConfirmAction(null) }}
         />
       )}
     </div>
@@ -253,6 +262,54 @@ function EditModal({ assignment, providers, workers, naves, onSave, onClose }) {
           <button onClick={onClose} className="flex-1 rounded-xl py-2.5 text-sm font-semibold border border-[#8fa3b1]/40 text-[#8fa3b1]">Cancelar</button>
           <button onClick={() => onSave({ provider, product, po, workers: selWorkers, naveId })}
             className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#1a3a8f]">Guardar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FinishModal({ assignment, onConfirm, onClose }) {
+  const [cajasReales, setCajasReales] = useState(
+    assignment.cajasEstimadas ? String(assignment.cajasEstimadas) : ''
+  )
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white dark:bg-[#162050] rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-base text-[#ec4899]">Finalizar Descarga</h3>
+          <button onClick={onClose}><X size={18} className="text-[#8fa3b1]" /></button>
+        </div>
+
+        {assignment.tipoCarga && (
+          <p className="text-xs text-[#8fa3b1]">Tipo de carga: <span className="font-semibold text-slate-700 dark:text-white">{assignment.tipoCarga}</span></p>
+        )}
+        {assignment.cajasEstimadas && (
+          <p className="text-xs text-[#8fa3b1]">Cajas estimadas: <span className="font-semibold text-slate-700 dark:text-white">{assignment.cajasEstimadas}</span></p>
+        )}
+
+        <div>
+          <label className="block text-xs text-[#8fa3b1] font-semibold uppercase mb-1">
+            Cajas reales descargadas
+          </label>
+          <input
+            type="number" min="0"
+            value={cajasReales}
+            onChange={(e) => setCajasReales(e.target.value)}
+            placeholder="Ej. 185"
+            className="w-full rounded-xl border-2 border-[#8fa3b1]/30 bg-transparent px-3 py-2.5 text-sm focus:border-[#ec4899] outline-none"
+            autoFocus
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 rounded-xl py-2.5 text-sm font-semibold border border-[#8fa3b1]/40 text-[#8fa3b1]">Cancelar</button>
+          <button
+            onClick={() => onConfirm(cajasReales ? Number(cajasReales) : null)}
+            className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#ec4899]"
+          >
+            Finalizar
+          </button>
         </div>
       </div>
     </div>

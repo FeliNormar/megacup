@@ -160,16 +160,16 @@ export function useAppState() {
     insertLog(assignment.id, session?.workerName || 'admin', 'creada')
   }
 
-  const finishDescarga = async (naveId) => {
+  const finishDescarga = async (naveId, cajasReales = null) => {
     const a = assignments[naveId]
     if (!a) return
-    const record = { ...a, endTime: Date.now(), status: 'finished' }
+    const record = { ...a, endTime: Date.now(), status: 'finished', ...(cajasReales !== null ? { cajasReales } : {}) }
     setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
     setRecords((r) => [record, ...r])
     clearTimer(a.id)
     await supabase.from('assignments').delete().eq('id', a.id)
     await supabase.from('records').insert([record])
-    insertLog(a.id, session?.workerName || 'admin', 'finalizada')
+    insertLog(a.id, session?.workerName || 'admin', 'finalizada', cajasReales ? `${cajasReales} cajas` : '')
   }
 
   const reportIncident = async (naveId, fotoUrl = null) => {

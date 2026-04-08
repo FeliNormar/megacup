@@ -47,8 +47,6 @@ export default function App() {
 
   const online = useOnlineStatus()
 
-  const online = useOnlineStatus()
-
   useRealtime({
     session,
     onNewAssignment: (a) => {
@@ -149,6 +147,8 @@ export default function App() {
         onTabChange={setTab}
         isAdmin={isAdmin}
         isAlmacenista={isAlmacenista}
+        onNewDescarga={() => setShowNew(true)}
+        online={online}
       />
 
       {showNew && isAdmin && (
@@ -231,7 +231,7 @@ function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers
               providers={providers}
               workers={workers}
               naves={naves}
-              onFinish={() => onFinish(a.naveId)}
+              onFinish={(cajasReales) => onFinish(a.naveId, cajasReales)}
               onIncident={(fotoUrl) => onIncident(a.naveId, fotoUrl)}
               onDelete={() => onDelete(a.naveId)}
               onEdit={(changes) => onEdit(a.naveId, changes)}
@@ -260,25 +260,75 @@ function EmptyState({ isAdmin, isAlmacenista }) {
   )
 }
 
-function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista }) {
+function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, onNewDescarga, online }) {
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  if (isAdmin) {
+    return (
+      <>
+        {/* Overlay */}
+        {menuOpen && (
+          <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setMenuOpen(false)} />
+        )}
+
+        {/* Menú hamburguesa admin */}
+        {menuOpen && (
+          <div className="fixed bottom-20 right-4 z-40 bg-white dark:bg-[#162050] rounded-2xl shadow-2xl border border-[#8fa3b1]/20 overflow-hidden w-56">
+            {[
+              { id: 'dashboard', icon: LayoutDashboard, label: 'Descargas activas' },
+              { id: 'analytics', icon: BarChart2,       label: 'Analítica' },
+              { id: 'settings',  icon: Settings,        label: 'Configuración' },
+            ].map(({ id, icon: Icon, label }) => (
+              <button key={id} onClick={() => { onTabChange(id); setMenuOpen(false) }}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium transition-colors hover:bg-[#1a3a8f]/10 ${
+                  tab === id ? 'text-[#1a3a8f] dark:text-[#8fa3b1] bg-[#1a3a8f]/5' : 'text-slate-700 dark:text-white'
+                }`}>
+                <Icon size={18} />
+                {label}
+              </button>
+            ))}
+            <div className="border-t border-[#8fa3b1]/20" />
+            <button
+              onClick={() => { onNewDescarga(); setMenuOpen(false) }}
+              disabled={!online}
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-[#1a3a8f] dark:text-[#8fa3b1] hover:bg-[#1a3a8f]/10 disabled:opacity-40"
+            >
+              <PlusCircle size={18} />
+              Nueva Descarga
+            </button>
+          </div>
+        )}
+
+        {/* Botón hamburguesa */}
+        <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#162050] border-t border-[#8fa3b1]/30 flex items-center justify-between px-4 py-2">
+          <span className="text-xs text-[#8fa3b1] font-semibold uppercase tracking-wide">Admin</span>
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex flex-col gap-1.5 p-2 rounded-xl hover:bg-[#1a3a8f]/10"
+          >
+            <span className={`block w-6 h-0.5 bg-[#1a3a8f] dark:bg-[#8fa3b1] transition-transform ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
+            <span className={`block w-6 h-0.5 bg-[#1a3a8f] dark:bg-[#8fa3b1] transition-opacity ${menuOpen ? 'opacity-0' : ''}`} />
+            <span className={`block w-6 h-0.5 bg-[#1a3a8f] dark:bg-[#8fa3b1] transition-transform ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+          </button>
+        </nav>
+      </>
+    )
+  }
+
+  // Barra simple para operadores y almacenistas
   const items = NAV_ITEMS.filter((item) => {
-    if (item.adminOnly) return isAdmin
-    if (item.adminOrAlmacen) return isAdmin || isAlmacenista
+    if (item.adminOnly) return false
+    if (item.adminOrAlmacen) return isAlmacenista
     return true
   })
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#162050] border-t border-[#8fa3b1]/30 flex">
       {items.map(({ id, icon: Icon, label }) => (
-        <button
-          key={id}
-          onClick={() => onTabChange(id)}
+        <button key={id} onClick={() => onTabChange(id)}
           className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors ${
-            tab === id
-              ? 'text-[#1a3a8f] dark:text-[#8fa3b1]'
-              : 'text-gray-400'
-          }`}
-        >
+            tab === id ? 'text-[#1a3a8f] dark:text-[#8fa3b1]' : 'text-gray-400'
+          }`}>
           <Icon size={22} />
           {label}
         </button>
