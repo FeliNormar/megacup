@@ -29,7 +29,7 @@ function getDeviceInfo() {
   return `${device}${browser ? ' / ' + browser : ''}`
 }
 
-export default function LoginScreen({ workers, adminCred, onLogin }) {
+export default function LoginScreen({ workers, adminCred, almacenCred, onLogin }) {
   const [mode,     setMode]     = useState('worker')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -69,10 +69,12 @@ export default function LoginScreen({ workers, adminCred, onLogin }) {
   }
 
   const handleAlmacen = async () => {
+    if (!almacenCred?.username) { setError('Credenciales no disponibles'); return }
+    if (username.trim() !== almacenCred.username) { setError('Credenciales incorrectas'); setPassword(''); return }
     setLoading(true)
-    const ok = await verifyPassword(password, '1234')
+    const ok = await verifyPassword(password, almacenCred.pin || '')
     setLoading(false)
-    if (username.trim() !== 'almacen' || !ok) { setError('Credenciales incorrectas'); setPassword(''); return }
+    if (!ok) { setError('Credenciales incorrectas'); setPassword(''); return }
     const sessionUser = { role: 'almacenista' }
     saveSession(sessionUser)
     onLogin(sessionUser)

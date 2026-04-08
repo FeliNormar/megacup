@@ -54,7 +54,8 @@ export function useAppState() {
   const [workers,   setWorkers]   = useState(() => ls.get('mc_workers',   DEFAULT_WORKERS))
   const [naves,     setNaves]     = useState(() => ls.get('mc_naves',     DEFAULT_NAVES))
   const [providers, setProviders] = useState(() => ls.get('mc_providers', DEFAULT_PROVIDERS))
-  const [adminCred, setAdminCred] = useState(() => ls.get('mc_admin',     DEFAULT_ADMIN))
+  const [adminCred,   setAdminCred]   = useState(() => ls.get('mc_admin',   DEFAULT_ADMIN))
+  const [almacenCred, setAlmacenCred] = useState(() => ls.get('mc_almacen', { username: 'almacen', pin: '1234' }))
 
   const [assignments, setAssignments] = useState({})
   const [records, setRecords] = useState(() => ls.get('mc_records', []))
@@ -92,6 +93,11 @@ export function useAppState() {
         if (adminData?.value) {
           setAdminCred(adminData.value)
           ls.set('mc_admin', adminData.value)
+        }
+        const { data: almacenData } = await supabase.from('config').select('value').eq('key', 'almacenista').single()
+        if (almacenData?.value) {
+          setAlmacenCred(almacenData.value)
+          ls.set('mc_almacen', almacenData.value)
         }
       } catch (err) {
         console.error('Error cargando datos de Supabase:', err)
@@ -144,7 +150,8 @@ export function useAppState() {
   useEffect(() => { ls.set('mc_workers',     workers)     }, [workers])
   useEffect(() => { ls.set('mc_naves',       naves)       }, [naves])
   useEffect(() => { ls.set('mc_providers',   providers)   }, [providers])
-  useEffect(() => { ls.set('mc_admin',       adminCred)   }, [adminCred])
+  useEffect(() => { ls.set('mc_admin',   adminCred)   }, [adminCred])
+  useEffect(() => { ls.set('mc_almacen', almacenCred) }, [almacenCred])
 
   // Guarda workers en Supabase al cambiar — hashea contraseñas nuevas
   const updateWorkers = async (newWorkers) => {
@@ -368,6 +375,7 @@ export function useAppState() {
     naves,     setNaves,
     providers, setProviders,
     adminCred, setAdminCred,
+    almacenCred,
     assignments, setAssignments,
     records,
 

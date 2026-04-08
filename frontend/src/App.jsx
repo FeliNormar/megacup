@@ -31,6 +31,7 @@ export default function App() {
     naves,     setNaves,
     providers, setProviders,
     adminCred,
+    almacenCred,
     assignments, setAssignments,
     records,
     visibleAssignments,
@@ -62,6 +63,7 @@ export default function App() {
       <LoginScreen
         workers={workers}
         adminCred={adminCred}
+        almacenCred={almacenCred}
         onLogin={setSession}
       />
     )
