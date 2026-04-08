@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'
+import XLSX from 'xlsx-js-style'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
@@ -53,12 +53,16 @@ export function exportToExcel(records, filters = {}) {
   const rows  = recordsToRows(records)
   const ws    = XLSX.utils.aoa_to_sheet([HEADERS, ...rows])
 
-  // Estilo encabezado
+  // Estilo encabezado — compatible con xlsx-js-style
   const range = XLSX.utils.decode_range(ws['!ref'])
   for (let C = range.s.c; C <= range.e.c; C++) {
     const cell = ws[XLSX.utils.encode_cell({ r: 0, c: C })]
     if (cell) {
-      cell.s = { font: { bold: true }, fill: { fgColor: { rgb: 'CCCCCC' } } }
+      cell.s = {
+        font:      { bold: true, color: { rgb: 'FFFFFF' } },
+        fill:      { fgColor: { rgb: '1A3A8F' } },
+        alignment: { horizontal: 'center' },
+      }
     }
   }
 
