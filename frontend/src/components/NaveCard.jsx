@@ -226,8 +226,22 @@ function EditModal({ assignment, providers, workers, naves, onSave, onClose }) {
   const [selWorkers, setSelWorkers] = useState(assignment.workers   || [])
   const [naveId,     setNaveId]     = useState(assignment.naveId    || '')
 
+  // Hora de inicio editable — convertir timestamp a datetime-local
+  const toDatetimeLocal = (ts) => {
+    if (!ts) return ''
+    const d = new Date(ts)
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+  const [startTimeStr, setStartTimeStr] = useState(toDatetimeLocal(assignment.startTime))
+
   const toggleWorker = (name) =>
     setSelWorkers((prev) => prev.includes(name) ? prev.filter((w) => w !== name) : [...prev, name])
+
+  const handleSave = () => {
+    const newStartTime = startTimeStr ? new Date(startTimeStr).getTime() : assignment.startTime
+    onSave({ provider, product, po, workers: selWorkers, naveId, startTime: newStartTime })
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -236,6 +250,10 @@ function EditModal({ assignment, providers, workers, naves, onSave, onClose }) {
           <h3 className="font-bold text-base">Editar Descarga</h3>
           <button onClick={onClose}><X size={18} className="text-[#8fa3b1]" /></button>
         </div>
+
+        <label className="block text-xs text-[#8fa3b1] font-semibold uppercase">Hora de inicio</label>
+        <input type="datetime-local" value={startTimeStr} onChange={(e) => setStartTimeStr(e.target.value)}
+          className="w-full rounded-xl border-2 border-[#8fa3b1]/30 bg-transparent px-3 py-2 text-sm focus:border-[#1a3a8f] outline-none" />
 
         <label className="block text-xs text-[#8fa3b1] font-semibold uppercase">Nave</label>
         <select value={naveId} onChange={(e) => setNaveId(e.target.value)}
@@ -272,7 +290,7 @@ function EditModal({ assignment, providers, workers, naves, onSave, onClose }) {
 
         <div className="flex gap-2 pt-2">
           <button onClick={onClose} className="flex-1 rounded-xl py-2.5 text-sm font-semibold border border-[#8fa3b1]/40 text-[#8fa3b1]">Cancelar</button>
-          <button onClick={() => onSave({ provider, product, po, workers: selWorkers, naveId })}
+          <button onClick={handleSave}
             className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#1a3a8f]">Guardar</button>
         </div>
       </div>

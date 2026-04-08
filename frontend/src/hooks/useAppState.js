@@ -270,7 +270,11 @@ export function useAppState() {
     if (!a) return
     const updated = { ...a, ...changes }
     setAssignments((prev) => ({ ...prev, [naveId]: updated }))
-    await supabase.from('assignments').update(changes).eq('id', a.id)
+    // Mapear a snake_case para Supabase
+    const supabaseChanges = { ...changes }
+    if (changes.tipoCarga !== undefined)      supabaseChanges.tipo_carga      = changes.tipoCarga
+    if (changes.cajasEstimadas !== undefined) supabaseChanges.cajas_estimadas = changes.cajasEstimadas
+    await supabase.from('assignments').update(supabaseChanges).eq('id', a.id)
     insertLog(a.id, session?.workerName || 'admin', 'editada', JSON.stringify(changes))
   }
 
