@@ -1,21 +1,22 @@
-import React, { useState } from 'react'
-import { LayoutDashboard, BarChart2, Settings, LogOut, Sun, Moon, PlusCircle, WifiOff } from 'lucide-react'
+import { useState } from 'react'
+import { LayoutDashboard, BarChart2, History, PlusCircle, Settings, LogOut, Sun, Moon, Menu, X } from 'lucide-react'
 
-import { useAppState }    from './hooks/useAppState'
-import { useRealtime }    from './hooks/useRealtime'
+import { useAppState }     from './hooks/useAppState'
+import { useRealtime }     from './hooks/useRealtime'
 import { useOnlineStatus } from './hooks/useOnlineStatus'
-import LoginScreen        from './components/LoginScreen'
-import NaveCard           from './components/NaveCard'
-import NewDescarga        from './components/NewDescarga'
-import Analytics          from './components/Analytics'
-import SettingsPanel      from './components/SettingsPanel'
-import ToastContainer     from './components/ToastContainer'
-import PageTransition     from './components/PageTransition'
+import LoginScreen         from './components/LoginScreen'
+import NaveCard            from './components/NaveCard'
+import NewDescarga         from './components/NewDescarga'
+import Analytics           from './components/Analytics'
+import SettingsPanel       from './components/SettingsPanel'
+import ToastContainer      from './components/ToastContainer'
+import PageTransition      from './components/PageTransition'
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Descargas' },
-  { id: 'analytics', icon: BarChart2,       label: 'Analítica', adminOrAlmacen: true },
-  { id: 'settings',  icon: Settings,        label: 'Config',    adminOnly: true },
+  { id: 'new',       icon: PlusCircle,      label: 'Nueva'     },
+  { id: 'analytics', icon: BarChart2,       label: 'Analítica' },
+  { id: 'history',   icon: History,         label: 'Historial' },
 ]
 
 export default function App() {
@@ -25,10 +26,10 @@ export default function App() {
   const {
     dark, setDark,
     session, setSession, logout,
-    workers,   setWorkers,
+    workers,
     naves,     setNaves,
     providers, setProviders,
-    adminCred, setAdminCred,
+    adminCred,
     assignments, setAssignments,
     records,
     visibleAssignments,
@@ -103,7 +104,7 @@ export default function App() {
               providers={providers}
               workers={workers}
               visibleAssignments={visibleAssignments}
-              onNewDescarga={() => setShowNew(true)}
+              onNewDescarga={() => setTab('new')}
               onFinish={finishDescarga}
               onIncident={reportIncident}
               onDelete={softDeleteAssignment}
@@ -112,7 +113,20 @@ export default function App() {
             />
           )}
 
-          {tab === 'analytics' && (isAdmin || isAlmacenista) && (
+          {tab === 'new' && isAdmin && (
+            <NewDescarga
+              naves={naves}
+              workers={workers}
+              providers={providers}
+              activeNaveIds={activeNaveIds}
+              adminCred={adminCred}
+              onSave={(data) => { createDescarga(data); setTab('dashboard') }}
+              onClose={() => setTab('dashboard')}
+              inline
+            />
+          )}
+
+          {(tab === 'analytics' || tab === 'history') && (isAdmin || isAlmacenista) && (
             <Analytics
               records={records}
               providers={providers}
@@ -123,6 +137,7 @@ export default function App() {
               onEditRecord={editRecord}
               naves={naves}
               workers={workers}
+              defaultTab={tab === 'history' ? 'history' : 'analytics'}
             />
           )}
 
@@ -147,20 +162,22 @@ export default function App() {
         onTabChange={setTab}
         isAdmin={isAdmin}
         isAlmacenista={isAlmacenista}
-        onNewDescarga={() => setShowNew(true)}
         online={online}
       />
 
-      {showNew && isAdmin && (
-        <NewDescarga
-          naves={naves}
-          workers={workers}
-          providers={providers}
-          activeNaveIds={activeNaveIds}
-          onSave={(data) => { createDescarga(data); setShowNew(false) }}
-          onClose={() => setShowNew(false)}
-        />
-      )}
+      {/* Menú hamburguesa config — solo admin */}
+      {isAdmin && <ConfigMenu
+        tab={tab}
+        onTabChange={setTab}
+        workers={workers}
+        naves={naves}
+        providers={providers}
+        adminCred={adminCred}
+        updateWorkers={updateWorkers}
+        setNaves={setNaves}
+        setProviders={setProviders}
+        updateAdmin={updateAdmin}
+      />}
     </div>
   )
 }
@@ -260,65 +277,10 @@ function EmptyState({ isAdmin, isAlmacenista }) {
   )
 }
 
-function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, onNewDescarga, online }) {
-  const [menuOpen, setMenuOpen] = useState(false)
-
-  if (isAdmin) {
-    return (
-      <>
-        {/* Overlay */}
-        {menuOpen && (
-          <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setMenuOpen(false)} />
-        )}
-
-        {/* Menú hamburguesa admin */}
-        {menuOpen && (
-          <div className="fixed bottom-20 right-4 z-40 bg-white dark:bg-[#162050] rounded-2xl shadow-2xl border border-[#8fa3b1]/20 overflow-hidden w-56">
-            {[
-              { id: 'dashboard', icon: LayoutDashboard, label: 'Descargas activas' },
-              { id: 'analytics', icon: BarChart2,       label: 'Analítica' },
-              { id: 'settings',  icon: Settings,        label: 'Configuración' },
-            ].map(({ id, icon: Icon, label }) => (
-              <button key={id} onClick={() => { onTabChange(id); setMenuOpen(false) }}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium transition-colors hover:bg-[#1a3a8f]/10 ${
-                  tab === id ? 'text-[#1a3a8f] dark:text-[#8fa3b1] bg-[#1a3a8f]/5' : 'text-slate-700 dark:text-white'
-                }`}>
-                <Icon size={18} />
-                {label}
-              </button>
-            ))}
-            <div className="border-t border-[#8fa3b1]/20" />
-            <button
-              onClick={() => { onNewDescarga(); setMenuOpen(false) }}
-              disabled={!online}
-              className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-[#1a3a8f] dark:text-[#8fa3b1] hover:bg-[#1a3a8f]/10 disabled:opacity-40"
-            >
-              <PlusCircle size={18} />
-              Nueva Descarga
-            </button>
-          </div>
-        )}
-
-        {/* Botón hamburguesa */}
-        <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#162050] border-t border-[#8fa3b1]/30 flex items-center justify-between px-4 py-2">
-          <span className="text-xs text-[#8fa3b1] font-semibold uppercase tracking-wide">Admin</span>
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="flex flex-col gap-1.5 p-2 rounded-xl hover:bg-[#1a3a8f]/10"
-          >
-            <span className={`block w-6 h-0.5 bg-[#1a3a8f] dark:bg-[#8fa3b1] transition-transform ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
-            <span className={`block w-6 h-0.5 bg-[#1a3a8f] dark:bg-[#8fa3b1] transition-opacity ${menuOpen ? 'opacity-0' : ''}`} />
-            <span className={`block w-6 h-0.5 bg-[#1a3a8f] dark:bg-[#8fa3b1] transition-transform ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
-          </button>
-        </nav>
-      </>
-    )
-  }
-
-  // Barra simple para operadores y almacenistas
+function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, online }) {
   const items = NAV_ITEMS.filter((item) => {
-    if (item.adminOnly) return false
-    if (item.adminOrAlmacen) return isAlmacenista
+    if (item.id === 'new') return isAdmin
+    if (item.id === 'analytics' || item.id === 'history') return isAdmin || isAlmacenista
     return true
   })
 
@@ -326,7 +288,8 @@ function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, onNewDescarga, on
     <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#162050] border-t border-[#8fa3b1]/30 flex">
       {items.map(({ id, icon: Icon, label }) => (
         <button key={id} onClick={() => onTabChange(id)}
-          className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors ${
+          disabled={id === 'new' && !online}
+          className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors disabled:opacity-40 ${
             tab === id ? 'text-[#1a3a8f] dark:text-[#8fa3b1]' : 'text-gray-400'
           }`}>
           <Icon size={22} />
@@ -334,5 +297,44 @@ function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, onNewDescarga, on
         </button>
       ))}
     </nav>
+  )
+}
+
+function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, updateWorkers, setNaves, setProviders, updateAdmin }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      {open && <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setOpen(false)} />}
+
+      {open && (
+        <div className="fixed bottom-20 right-4 z-50 bg-white dark:bg-[#162050] rounded-2xl shadow-2xl border border-[#8fa3b1]/20 overflow-hidden w-64 max-h-[70vh] overflow-y-auto">
+          <div className="px-4 py-3 border-b border-[#8fa3b1]/20 flex items-center justify-between">
+            <span className="font-bold text-sm text-[#1a3a8f] dark:text-white">Configuración</span>
+            <button onClick={() => setOpen(false)}><X size={16} className="text-[#8fa3b1]" /></button>
+          </div>
+          <div className="p-3">
+            <SettingsPanel
+              workers={workers}
+              naves={naves}
+              providers={providers}
+              adminCred={adminCred}
+              onUpdateWorkers={updateWorkers}
+              onUpdateNaves={setNaves}
+              onUpdateProviders={setProviders}
+              onUpdateAdmin={updateAdmin}
+            />
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="fixed bottom-16 right-4 z-40 w-12 h-12 rounded-full shadow-lg flex items-center justify-center"
+        style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}
+      >
+        {open ? <X size={20} className="text-white" /> : <Settings size={20} className="text-white" />}
+      </button>
+    </>
   )
 }
