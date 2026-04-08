@@ -66,7 +66,15 @@ export function useAppState() {
         const { data: activeData } = await supabase.from('assignments').select('*').eq('status', 'active').is('deleted_at', null)
         if (activeData) {
           const map = {}
-          activeData.forEach(a => map[a.naveId] = a)
+          activeData.forEach(a => {
+            // Normalizar snake_case a camelCase
+            const normalized = {
+              ...a,
+              tipoCarga:      a.tipo_carga      || a.tipoCarga,
+              cajasEstimadas: a.cajas_estimadas || a.cajasEstimadas,
+            }
+            map[a.naveId] = normalized
+          })
           setAssignments(map)
           ls.set('mc_assignments', map)
         } else {
@@ -178,7 +186,24 @@ export function useAppState() {
   const createDescarga = async (data) => {
     const assignment = { id: uid(), ...data, startTime: Date.now(), status: 'active' }
     setAssignments((prev) => ({ ...prev, [data.naveId]: assignment }))
-    await supabase.from('assignments').insert([assignment])
+    // Mapear camelCase a snake_case para Supabase
+    const row = {
+      id:               assignment.id,
+      naveId:           assignment.naveId,
+      naveName:         assignment.naveName,
+      provider:         assignment.provider,
+      product:          assignment.product,
+      po:               assignment.po || null,
+      workers:          assignment.workers || [],
+      descargadores:    assignment.descargadores || [],
+      estibadores:      assignment.estibadores || [],
+      startTime:        assignment.startTime,
+      status:           'active',
+      tipo_carga:       assignment.tipoCarga || null,
+      cajas_estimadas:  assignment.cajasEstimadas || null,
+    }
+    const { error } = await supabase.from('assignments').insert([row])
+    if (error) console.error('Error guardando descarga:', error)
     insertLog(assignment.id, session?.workerName || 'admin', 'creada')
   }
 
