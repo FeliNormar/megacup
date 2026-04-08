@@ -6,7 +6,7 @@ import { startOfWeek, endOfWeek, format, subWeeks } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { esDiaOperativo, diasActivosOrdenados, labelDia } from '../config/operacion'
 
-const COLORES = { 1: '#1a3a8f', 5: '#16a34a', 6: '#f97316' }
+const COLORES = { 1: '#1a3a8f', 2: '#2563c4', 3: '#0891b2', 4: '#0d9488', 5: '#16a34a', 6: '#f97316' }
 
 function formatDuration(seconds) {
   if (!seconds || seconds < 0) return '0 min'

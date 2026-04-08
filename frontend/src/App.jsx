@@ -11,6 +11,7 @@ import Analytics           from './components/Analytics'
 import SettingsPanel       from './components/SettingsPanel'
 import ToastContainer      from './components/ToastContainer'
 import PageTransition      from './components/PageTransition'
+import WorkerPanel         from './components/WorkerPanel'
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Descargas' },
@@ -139,6 +140,10 @@ export default function App() {
               workers={workers}
               defaultTab={tab === 'history' ? 'history' : 'analytics'}
             />
+          )}
+
+          {tab === 'history' && isWorker && (
+            <WorkerPanel records={records} workerName={session.workerName} />
           )}
 
           {tab === 'settings' && isAdmin && (

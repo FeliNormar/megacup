@@ -185,7 +185,23 @@ export function useAppState() {
   const finishDescarga = async (naveId, cajasReales = null) => {
     const a = assignments[naveId]
     if (!a) return
-    const record = { ...a, endTime: Date.now(), status: 'finished', ...(cajasReales !== null ? { cajasReales } : {}) }
+
+    // Calcular cajas por persona
+    const descargadores = a.descargadores || []
+    const estibadores   = a.estibadores   || []
+    const cajasXDescarg = cajasReales && descargadores.length > 0
+      ? Math.round(cajasReales / descargadores.length) : null
+    const cajasXEstib   = cajasReales && estibadores.length > 0
+      ? Math.round(cajasReales / estibadores.length) : null
+
+    const record = {
+      ...a,
+      endTime:    Date.now(),
+      status:     'finished',
+      ...(cajasReales !== null ? { cajasReales } : {}),
+      ...(cajasXDescarg ? { cajasXDescargador: cajasXDescarg } : {}),
+      ...(cajasXEstib   ? { cajasXEstibador:   cajasXEstib   } : {}),
+    }
     setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
     setRecords((r) => [record, ...r])
     clearTimer(a.id)
