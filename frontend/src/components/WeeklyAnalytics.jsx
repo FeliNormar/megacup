@@ -55,14 +55,18 @@ export default function WeeklyAnalytics({ records = [], dark }) {
     return Object.values(map).sort((a, b) => b.weekStart - a.weekStart).slice(0, 8)
   }, [operativos])
 
-  // Datos para la gráfica
+  // Datos para la gráfica — semanas en orden cronológico, días en orden Lun→Sáb
   const chartData = useMemo(() =>
     semanas.map((s) => {
       const row = { semana: s.label }
-      dias.forEach((d) => { row[d.label] = parseFloat((s.dias[d.dayIndex]?.segundos / 3600 || 0).toFixed(2)) })
+      // Ordenar explícitamente por dayIndex
+      const diasOrdenados = [...dias].sort((a, b) => a.dayIndex - b.dayIndex)
+      diasOrdenados.forEach((d) => {
+        row[d.label] = parseFloat((s.dias[d.dayIndex]?.segundos / 3600 || 0).toFixed(2))
+      })
       return row
     }).reverse()
-  , [semanas])
+  , [semanas, dias])
 
   // Semana seleccionada para ranking
   const semanaActual = semanas[selectedWeekOffset] || null
@@ -152,7 +156,7 @@ export default function WeeklyAnalytics({ records = [], dark }) {
               contentStyle={{ background: dark ? '#162050' : '#fff', border: '1px solid #8fa3b1' }}
             />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            {dias.map((d) => (
+            {[...dias].sort((a, b) => a.dayIndex - b.dayIndex).map((d) => (
               <Bar key={d.dayIndex} dataKey={d.label} fill={COLORES[d.dayIndex] || '#8fa3b1'} radius={[4,4,0,0]} />
             ))}
           </BarChart>
