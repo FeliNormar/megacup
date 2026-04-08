@@ -214,7 +214,6 @@ export function useAppState() {
     const a = assignments[naveId]
     if (!a) return
 
-    // Calcular cajas por persona
     const descargadores = a.descargadores || []
     const estibadores   = a.estibadores   || []
     const cajasXDescarg = cajasReales && descargadores.length > 0
@@ -224,17 +223,39 @@ export function useAppState() {
 
     const record = {
       ...a,
-      endTime:    Date.now(),
-      status:     'finished',
-      ...(cajasReales !== null ? { cajasReales } : {}),
-      ...(cajasXDescarg ? { cajasXDescargador: cajasXDescarg } : {}),
-      ...(cajasXEstib   ? { cajasXEstibador:   cajasXEstib   } : {}),
+      endTime: Date.now(),
+      status:  'finished',
+      cajasReales:       cajasReales       || null,
+      cajasXDescargador: cajasXDescarg     || null,
+      cajasXEstibador:   cajasXEstib       || null,
     }
     setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
     setRecords((r) => [record, ...r])
     clearTimer(a.id)
     await supabase.from('assignments').delete().eq('id', a.id)
-    await supabase.from('records').insert([record])
+
+    // Mapear a snake_case para Supabase
+    const row = {
+      id:                  record.id,
+      naveId:              record.naveId,
+      naveName:            record.naveName,
+      provider:            record.provider,
+      product:             record.product,
+      po:                  record.po || null,
+      workers:             record.workers || [],
+      descargadores:       record.descargadores || [],
+      estibadores:         record.estibadores || [],
+      startTime:           record.startTime,
+      endTime:             record.endTime,
+      status:              'finished',
+      tipo_carga:          record.tipoCarga || record.tipo_carga || null,
+      cajas_estimadas:     record.cajasEstimadas || record.cajas_estimadas || null,
+      cajas_reales:        cajasReales || null,
+      cajas_x_descargador: cajasXDescarg || null,
+      cajas_x_estibador:   cajasXEstib || null,
+    }
+    const { error } = await supabase.from('records').insert([row])
+    if (error) console.error('Error guardando record:', error)
     insertLog(a.id, session?.workerName || 'admin', 'finalizada', cajasReales ? `${cajasReales} cajas` : '')
   }
 
