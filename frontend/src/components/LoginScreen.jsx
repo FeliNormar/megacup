@@ -1,6 +1,33 @@
 import React, { useState } from 'react'
 import { Lock, User, ChevronRight, Eye, EyeOff, Loader } from 'lucide-react'
 import { verifyPassword, saveSession } from '../utils/auth'
+import { supabase } from '../utils/supabase'
+
+function getDeviceInfo() {
+  const ua = navigator.userAgent
+  // Detectar modelo/sistema
+  const android = ua.match(/Android.*?;\s([^)]+)\)/)
+  const iphone  = ua.match(/iPhone OS ([\d_]+)/)
+  const ipad    = ua.match(/iPad.*OS ([\d_]+)/)
+  // Detectar navegador
+  const chrome  = ua.match(/Chrome\/([\d.]+)/)
+  const safari  = ua.match(/Version\/([\d.]+).*Safari/)
+  const firefox = ua.match(/Firefox\/([\d.]+)/)
+
+  let device = 'Desconocido'
+  if (android)      device = android[1].trim()
+  else if (iphone)  device = `iPhone iOS ${iphone[1].replace(/_/g, '.')}`
+  else if (ipad)    device = `iPad iOS ${ipad[1].replace(/_/g, '.')}`
+  else if (/Windows/.test(ua)) device = 'Windows PC'
+  else if (/Mac/.test(ua))     device = 'Mac'
+
+  let browser = ''
+  if (chrome)       browser = `Chrome ${chrome[1].split('.')[0]}`
+  else if (safari)  browser = `Safari ${safari[1].split('.')[0]}`
+  else if (firefox) browser = `Firefox ${firefox[1].split('.')[0]}`
+
+  return `${device}${browser ? ' / ' + browser : ''}`
+}
 
 export default function LoginScreen({ workers, adminCred, onLogin }) {
   const [mode,     setMode]     = useState('worker')
@@ -19,6 +46,12 @@ export default function LoginScreen({ workers, adminCred, onLogin }) {
     const ok = await verifyPassword(password, w.pwd || w.password || '')
     setLoading(false)
     if (!ok) { setError('Contraseña incorrecta'); setPassword(''); return }
+    // Guardar dispositivo y hora de login
+    const device = getDeviceInfo()
+    supabase.from('workers').update({
+      last_device: device,
+      last_login:  new Date().toISOString(),
+    }).eq('id', w.id).then(() => {})
     const sessionUser = { role: 'worker', workerId: w.id, workerName: w.name }
     saveSession(sessionUser)
     onLogin(sessionUser)

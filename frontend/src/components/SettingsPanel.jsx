@@ -156,9 +156,22 @@ function WorkerRow({ w, editId, editPwd, setEditId, setEditPwd, onRemove, onSave
         )}
       </div>
 
+      {/* Último dispositivo */}
+      {w.last_device && (
+        <div className="mt-1 rounded-lg bg-[#8fa3b1]/10 px-2 py-1.5">
+          <p className="text-xs text-[#8fa3b1]">
+            📱 <span className="font-semibold text-slate-700 dark:text-white">{w.last_device}</span>
+          </p>
+          {w.last_login && (
+            <p className="text-xs text-[#8fa3b1]">
+              🕐 {new Date(w.last_login).toLocaleString('es-MX', { day:'2-digit', month:'2-digit', year:'numeric', hour:'numeric', minute:'2-digit', hour12:true })}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Teléfono WhatsApp */}
-      <div className="flex items-center gap-2 mt-1">
-        <span className="text-xs text-[#8fa3b1]">WhatsApp:</span>
+      <div className="flex items-center gap-2 mt-1">        <span className="text-xs text-[#8fa3b1]">WhatsApp:</span>
         {editPhone ? (
           <div className="flex gap-1 flex-1">
             <input
