@@ -67,6 +67,7 @@ export default function WeeklyAnalytics({ records = [], dark }) {
   // Datos para la gráfica — semanas en orden cronológico, días en orden Lun→Sáb
   const chartData = useMemo(() =>
     semanas.map((s) => {
+      // Construir objeto con orden garantizado usando prefijo para evitar reordenamiento
       const row = { semana: s.label }
       diasOrdenados.forEach((d) => {
         row[d.label] = parseFloat((s.dias[d.dayIndex]?.segundos / 3600 || 0).toFixed(2))
@@ -159,10 +160,37 @@ export default function WeeklyAnalytics({ records = [], dark }) {
             <XAxis dataKey="semana" tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} />
             <YAxis tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} unit="h" />
             <Tooltip
-              formatter={(val, name) => [val === 0 ? 'Sin actividad' : `${val}h`, name]}
-              contentStyle={{ background: dark ? '#162050' : '#fff', border: '1px solid #8fa3b1' }}
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null
+                // Forzar orden Lun→Sáb en el tooltip
+                const ordered = diasOrdenados.map((d) => {
+                  const entry = payload.find((p) => p.dataKey === d.label)
+                  return entry ? { ...entry, name: d.label } : { name: d.label, value: 0, color: COLORES[d.dayIndex] }
+                })
+                return (
+                  <div style={{ background: dark ? '#162050' : '#fff', border: '1px solid #8fa3b1', borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+                    <p style={{ fontWeight: 'bold', marginBottom: 4 }}>{label}</p>
+                    {ordered.map((e) => (
+                      <p key={e.name} style={{ color: e.color, margin: '2px 0' }}>
+                        {e.name} : {e.value === 0 ? 'Sin actividad' : `${e.value}h`}
+                      </p>
+                    ))}
+                  </div>
+                )
+              }}
             />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Legend
+              content={() => (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', fontSize: 11, marginTop: 4 }}>
+                  {diasOrdenados.map((d) => (
+                    <span key={d.dayIndex} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 2, background: COLORES[d.dayIndex], display: 'inline-block' }} />
+                      {d.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            />
             {diasOrdenados.map((d) => (
               <Bar key={d.dayIndex} dataKey={d.label} fill={COLORES[d.dayIndex] || '#8fa3b1'} radius={[4,4,0,0]} />
             ))}
