@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LayoutDashboard, BarChart2, History, PlusCircle, Settings, LogOut, Sun, Moon, Menu, X } from 'lucide-react'
+import { LayoutDashboard, BarChart2, History, PlusCircle, Settings, LogOut, Sun, Moon, Menu, X, RefreshCw } from 'lucide-react'
 
 import { useAppState }     from './hooks/useAppState'
 import { useRealtime }     from './hooks/useRealtime'
@@ -193,6 +193,9 @@ export default function App() {
         setProviders={setProviders}
         updateAdmin={updateAdmin}
       />}
+
+      {/* Botón limpiar caché flotante — todos los roles */}
+      <ClearCacheButton />
     </div>
   )
 }
@@ -351,5 +354,34 @@ function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, up
         {open ? <X size={20} className="text-white" /> : <Settings size={20} className="text-white" />}
       </button>
     </>
+  )
+}
+
+function ClearCacheButton() {
+  const handleClear = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(regs.map((r) => r.unregister()))
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys()
+        await Promise.all(keys.map((k) => caches.delete(k)))
+      }
+      localStorage.removeItem('app_version')
+    } catch (e) {
+      console.warn(e)
+    }
+    window.location.reload()
+  }
+
+  return (
+    <button
+      onClick={handleClear}
+      title="Limpiar caché y recargar"
+      className="fixed bottom-16 right-20 z-40 w-12 h-12 rounded-full shadow-lg flex items-center justify-center bg-orange-500"
+    >
+      <RefreshCw size={20} className="text-white" />
+    </button>
   )
 }
