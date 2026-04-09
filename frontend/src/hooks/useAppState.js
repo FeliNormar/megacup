@@ -10,6 +10,7 @@ import {
 import { supabase } from '../utils/supabase'
 import { loadSession, clearSession, hashPassword } from '../utils/auth'
 import { insertLog } from '../utils/auditLog'
+import { toast } from '../components/ToastContainer'
 
 // Versión del caché — incrementar cuando haya cambios de esquema
 const CACHE_VERSION = '3'
@@ -58,7 +59,26 @@ export function useAppState() {
   const [almacenCred, setAlmacenCred] = useState(() => ls.get('mc_almacen', { username: 'almacen', pin: '1234' }))
 
   const [assignments, setAssignments] = useState({})
-  const [records, setRecords] = useState(() => ls.get('mc_records', []))
+  const [records,      setRecords]      = useState(() => ls.get('mc_records', []))
+  const [recordsPage,  setRecordsPage]  = useState(0)
+  const [recordsTotal, setRecordsTotal] = useState(0)
+  const RECORDS_PAGE_SIZE = 50
+
+  const fetchRecordsPage = async (page = 0) => {
+    const from = page * RECORDS_PAGE_SIZE
+    const to   = from + RECORDS_PAGE_SIZE - 1
+    const { data, count, error } = await supabase
+      .from('records')
+      .select('*', { count: 'exact' })
+      .is('deleted_at', null)
+      .order('endTime', { ascending: false })
+      .range(from, to)
+    if (!error && data) {
+      setRecords(data)
+      setRecordsPage(page)
+      if (count !== null) setRecordsTotal(count)
+    }
+  }
 
   // ── Sincronización Inicial con Supabase ────────────────────────────────────
   useEffect(() => {
@@ -82,7 +102,7 @@ export function useAppState() {
           setAssignments({})
           ls.set('mc_assignments', {})
         }
-        const { data: recordsData } = await supabase.from('records').select('*').is('deleted_at', null).order('endTime', { ascending: false }).limit(100)
+        const { data: recordsData } = await supabase.from('records').select('*').is('deleted_at', null).order('endTime', { ascending: false }).limit(50)
         if (recordsData && recordsData.length > 0) setRecords(recordsData)
         const { data: workersData } = await supabase.from('workers').select('*')
         if (workersData && workersData.length > 0) {
@@ -213,7 +233,7 @@ export function useAppState() {
       cajas_estimadas:  assignment.cajasEstimadas || null,
     }
     const { error } = await supabase.from('assignments').insert([row])
-    if (error) console.error('Error guardando descarga:', error)
+    if (error) { console.error('Error guardando descarga:', error); toast('❌ Error al guardar la descarga. Intenta de nuevo.') }
     insertLog(assignment.id, session?.workerName || 'admin', 'creada')
   }
 
@@ -262,7 +282,7 @@ export function useAppState() {
       cajas_x_estibador:   cajasXEstib || null,
     }
     const { error } = await supabase.from('records').insert([row])
-    if (error) console.error('Error guardando record:', error)
+    if (error) { console.error('Error guardando record:', error); toast('❌ Error al finalizar la descarga. Intenta de nuevo.') }
     insertLog(a.id, session?.workerName || 'admin', 'finalizada', cajasReales ? `${cajasReales} cajas` : '')
   }
 
@@ -378,6 +398,10 @@ export function useAppState() {
     almacenCred,
     assignments, setAssignments,
     records,
+    recordsPage,
+    recordsTotal,
+    recordsPageSize: RECORDS_PAGE_SIZE,
+    fetchRecordsPage,
 
     // Acciones
     createDescarga,

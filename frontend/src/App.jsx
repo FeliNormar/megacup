@@ -34,6 +34,10 @@ export default function App() {
     almacenCred,
     assignments, setAssignments,
     records,
+    recordsPage,
+    recordsTotal,
+    recordsPageSize,
+    fetchRecordsPage,
     visibleAssignments,
     activeNaveIds,
     isAdmin, isAlmacenista, isWorker,
@@ -141,6 +145,10 @@ export default function App() {
               naves={naves}
               workers={workers}
               defaultTab={tab === 'history' ? 'history' : 'analytics'}
+              recordsPage={recordsPage}
+              recordsTotal={recordsTotal}
+              recordsPageSize={recordsPageSize}
+              fetchRecordsPage={fetchRecordsPage}
             />
           )}
 

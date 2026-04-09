@@ -13,7 +13,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const PROVIDERS = ['Pactiv', 'Arero', 'Maver', 'Dart', 'Desola', 'Biodeli']
 
-export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab }) {
+export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab, recordsPage, recordsTotal, recordsPageSize, fetchRecordsPage }) {
   const [view, setView] = useState(defaultTab === 'history' ? 'history' : 'weekly')
   const printRef = useRef(null)
 
@@ -164,6 +164,29 @@ export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, 
             onDelete={onDeleteRecord}
             onEditCajas={onEditRecord}
           />
+          {/* Paginación */}
+          {recordsTotal > recordsPageSize && (
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#8fa3b1]/20">
+              <button
+                onClick={() => fetchRecordsPage(recordsPage - 1)}
+                disabled={recordsPage === 0}
+                className="px-4 py-2 rounded-xl text-sm font-semibold border border-[#8fa3b1]/30 text-[#8fa3b1] disabled:opacity-40"
+              >
+                ← Anterior
+              </button>
+              <span className="text-xs text-[#8fa3b1]">
+                Página {recordsPage + 1} de {Math.ceil(recordsTotal / recordsPageSize)}
+                {' '}· {recordsTotal} registros
+              </span>
+              <button
+                onClick={() => fetchRecordsPage(recordsPage + 1)}
+                disabled={(recordsPage + 1) * recordsPageSize >= recordsTotal}
+                className="px-4 py-2 rounded-xl text-sm font-semibold border border-[#8fa3b1]/30 text-[#8fa3b1] disabled:opacity-40"
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
