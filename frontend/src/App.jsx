@@ -50,6 +50,7 @@ export default function App() {
     softDeleteRecord,
     editAssignment,
     editRecord,
+    importRecord,
   } = useAppState()
 
   const online = useOnlineStatus()
@@ -166,6 +167,7 @@ export default function App() {
               onUpdateNaves={setNaves}
               onUpdateProviders={setProviders}
               onUpdateAdmin={updateAdmin}
+              onImportRecord={importRecord}
             />
           )}
           </PageTransition>
@@ -192,6 +194,7 @@ export default function App() {
         setNaves={setNaves}
         setProviders={setProviders}
         updateAdmin={updateAdmin}
+        importRecord={importRecord}
       />}
 
       {/* Botón limpiar caché flotante — todos los roles */}
@@ -318,7 +321,7 @@ function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, online }) {
   )
 }
 
-function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, updateWorkers, setNaves, setProviders, updateAdmin }) {
+function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, updateWorkers, setNaves, setProviders, updateAdmin, importRecord }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -341,6 +344,7 @@ function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, up
               onUpdateNaves={setNaves}
               onUpdateProviders={setProviders}
               onUpdateAdmin={updateAdmin}
+              onImportRecord={importRecord}
             />
           </div>
         </div>

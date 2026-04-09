@@ -213,8 +213,39 @@ export function useAppState() {
     }
   }
 
+  const importRecord = async (data) => {
+    const cajasXDesc = data.cajasReales && data.descargadores?.length > 0
+      ? Math.round(data.cajasReales / data.descargadores.length) : null
+    const cajasXEstib = data.cajasReales && data.estibadores?.length > 0
+      ? Math.round(data.cajasReales / data.estibadores.length) : null
+    const record = {
+      id:                  uid(),
+      naveId:              data.naveId,
+      naveName:            data.naveName,
+      provider:            data.provider,
+      product:             data.product,
+      po:                  data.po || null,
+      workers:             data.workers || [],
+      descargadores:       data.descargadores || [],
+      estibadores:         data.estibadores || [],
+      startTime:           data.startTime,
+      endTime:             data.endTime,
+      status:              'finished',
+      tipo_carga:          data.tipoCarga || null,
+      cajas_estimadas:     data.cajasEstimadas || null,
+      cajas_reales:        data.cajasReales || null,
+      cajas_x_descargador: cajasXDesc,
+      cajas_x_estibador:   cajasXEstib,
+    }
+    const { error } = await supabase.from('records').insert([record])
+    if (error) { console.error('Error importando record:', error); toast('❌ Error al guardar el registro.'); return false }
+    setRecords((prev) => [record, ...prev])
+    insertLog(record.id, session?.workerName || 'admin', 'creada', 'importado manualmente')
+    toast('✅ Registro histórico guardado')
+    return true
+  }
+
   const createDescarga = async (data) => {
-    const assignment = { id: uid(), ...data, startTime: Date.now(), status: 'active' }
     setAssignments((prev) => ({ ...prev, [data.naveId]: assignment }))
     // Mapear camelCase a snake_case para Supabase
     const row = {
@@ -416,6 +447,7 @@ export function useAppState() {
     editRecord,
     updateWorkers,
     updateAdmin,
+    importRecord,
 
     // Derivados
     visibleAssignments,

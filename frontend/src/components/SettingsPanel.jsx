@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Plus, Trash2, Save, ChevronDown, ChevronUp, Package, Users, Warehouse, Lock, Eye, EyeOff, RefreshCw } from 'lucide-react'
+import { Plus, Trash2, Save, ChevronDown, ChevronUp, Package, Users, Warehouse, Lock, Eye, EyeOff, RefreshCw, ClipboardList } from 'lucide-react'
 
 function uid() { return `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` }
 
@@ -269,7 +269,7 @@ function ProviderEditor({ providers, onChange }) {
 }
 
 // ── Panel principal ───────────────────────────────────────────────────────────
-export default function SettingsPanel({ workers, naves, providers, adminCred, onUpdateWorkers, onUpdateNaves, onUpdateProviders, onUpdateAdmin }) {
+export default function SettingsPanel({ workers, naves, providers, adminCred, onUpdateWorkers, onUpdateNaves, onUpdateProviders, onUpdateAdmin, onImportRecord }) {
   const [newUser, setNewUser] = useState('')
   const [newPin,  setNewPin]  = useState('')
   const [msg,     setMsg]     = useState('')
@@ -312,8 +312,7 @@ export default function SettingsPanel({ workers, naves, providers, adminCred, on
         {msg && <p className="text-xs text-center text-[#2563c4]">{msg}</p>}
       </Section>
 
-      <Section icon={RefreshCw} title="Mantenimiento">
-        <p className="text-xs text-[#8fa3b1]">Si la app no carga bien o muestra datos desactualizados, limpia el caché del navegador.</p>
+      <Section icon={RefreshCw} title="Mantenimiento">        <p className="text-xs text-[#8fa3b1]">Si la app no carga bien o muestra datos desactualizados, limpia el caché del navegador.</p>
         <button
           onClick={async () => {
             try {
@@ -336,6 +335,167 @@ export default function SettingsPanel({ workers, naves, providers, adminCred, on
           <RefreshCw size={15} /> Limpiar caché y recargar
         </button>
       </Section>
+
+      {onImportRecord && (
+        <Section icon={ClipboardList} title="Agregar Registro Histórico">
+          <ImportRecord workers={workers} naves={naves} providers={providers} onSave={onImportRecord} />
+        </Section>
+      )}
+    </div>
+  )
+}
+
+function ImportRecord({ workers, naves, providers, onSave }) {
+  const toDatetimeLocal = (d) => {
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+  const now = new Date()
+  const oneHourAgo = new Date(now - 3600000)
+
+  const [naveId,       setNaveId]       = useState(naves[0]?.id || '')
+  const [provider,     setProvider]     = useState(providers[0]?.name || '')
+  const [product,      setProduct]      = useState(providers[0]?.products?.[0] || '')
+  const [po,           setPo]           = useState('')
+  const [tipoCarga,    setTipoCarga]    = useState('')
+  const [startVal,     setStartVal]     = useState(toDatetimeLocal(oneHourAgo))
+  const [endVal,       setEndVal]       = useState(toDatetimeLocal(now))
+  const [cajasEst,     setCajasEst]     = useState('')
+  const [cajasReal,    setCajasReal]    = useState('')
+  const [descarg,      setDescarg]      = useState([])
+  const [estib,        setEstib]        = useState([])
+  const [saving,       setSaving]       = useState(false)
+
+  const selectedNave     = naves.find((n) => n.id === naveId)
+  const selectedProvider = providers.find((p) => p.name === provider)
+
+  const toggleDescarg = (name) => setDescarg((p) => p.includes(name) ? p.filter((x) => x !== name) : [...p, name])
+  const toggleEstib   = (name) => setEstib((p)   => p.includes(name) ? p.filter((x) => x !== name) : [...p, name])
+
+  const handleSave = async () => {
+    if (!naveId || !provider || !product || !startVal || !endVal) return
+    setSaving(true)
+    const ok = await onSave({
+      naveId,
+      naveName:      selectedNave?.name || naveId,
+      provider,
+      product,
+      po,
+      tipoCarga,
+      startTime:     new Date(startVal).getTime(),
+      endTime:       new Date(endVal).getTime(),
+      cajasEstimadas: cajasEst  ? Number(cajasEst)  : null,
+      cajasReales:    cajasReal ? Number(cajasReal) : null,
+      workers:       [...new Set([...descarg, ...estib])],
+      descargadores: descarg,
+      estibadores:   estib,
+    })
+    setSaving(false)
+    if (ok) {
+      setPo(''); setTipoCarga(''); setCajasEst(''); setCajasReal('')
+      setDescarg([]); setEstib([])
+      setStartVal(toDatetimeLocal(oneHourAgo)); setEndVal(toDatetimeLocal(now))
+    }
+  }
+
+  const inputCls = 'w-full rounded-xl border-2 border-[#8fa3b1]/30 bg-transparent px-3 py-2 text-sm focus:border-[#1a3a8f] outline-none'
+  const labelCls = 'text-xs text-[#8fa3b1] font-semibold mb-1'
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-[#8fa3b1]">Ingresa descargas pasadas para incluirlas en las métricas.</p>
+
+      <div>
+        <p className={labelCls}>Nave</p>
+        <select value={naveId} onChange={(e) => setNaveId(e.target.value)} className={inputCls}>
+          {naves.map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
+        </select>
+      </div>
+
+      <div>
+        <p className={labelCls}>Proveedor</p>
+        <select value={provider} onChange={(e) => { setProvider(e.target.value); setProduct(providers.find(p=>p.name===e.target.value)?.products?.[0]||'') }} className={inputCls}>
+          {providers.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+        </select>
+      </div>
+
+      <div>
+        <p className={labelCls}>Producto</p>
+        <select value={product} onChange={(e) => setProduct(e.target.value)} className={inputCls}>
+          {(selectedProvider?.products || []).map((pr) => <option key={pr} value={pr}>{pr}</option>)}
+        </select>
+      </div>
+
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <p className={labelCls}>PO (opcional)</p>
+          <input type="text" value={po} onChange={(e) => setPo(e.target.value)} placeholder="PO-123" className={inputCls} />
+        </div>
+        <div className="flex-1">
+          <p className={labelCls}>Tipo carga</p>
+          <select value={tipoCarga} onChange={(e) => setTipoCarga(e.target.value)} className={inputCls}>
+            <option value="">—</option>
+            <option value="Ligero">Ligero</option>
+            <option value="Pesado">Pesado</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <p className={labelCls}>🕐 Hora inicio</p>
+        <input type="datetime-local" value={startVal} onChange={(e) => setStartVal(e.target.value)} className={inputCls} />
+      </div>
+      <div>
+        <p className={labelCls}>🕐 Hora fin</p>
+        <input type="datetime-local" value={endVal} onChange={(e) => setEndVal(e.target.value)} className={inputCls} />
+      </div>
+
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <p className={labelCls}>Cajas estimadas</p>
+          <input type="number" value={cajasEst} onChange={(e) => setCajasEst(e.target.value)} placeholder="0" className={inputCls} />
+        </div>
+        <div className="flex-1">
+          <p className={labelCls}>Cajas reales</p>
+          <input type="number" value={cajasReal} onChange={(e) => setCajasReal(e.target.value)} placeholder="0" className={inputCls} />
+        </div>
+      </div>
+
+      {workers.length > 0 && (
+        <>
+          <div>
+            <p className={labelCls}>📥 Descargadores</p>
+            <div className="flex flex-wrap gap-1">
+              {workers.map((w) => (
+                <button key={w.id} onClick={() => toggleDescarg(w.name)}
+                  className={`px-2 py-1 rounded-full text-xs border transition-colors ${
+                    descarg.includes(w.name) ? 'bg-[#1a3a8f] border-[#1a3a8f] text-white' : 'border-[#8fa3b1]/40 text-[#8fa3b1]'
+                  }`}>
+                  {w.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className={labelCls}>🏗️ Estibadores</p>
+            <div className="flex flex-wrap gap-1">
+              {workers.map((w) => (
+                <button key={w.id} onClick={() => toggleEstib(w.name)}
+                  className={`px-2 py-1 rounded-full text-xs border transition-colors ${
+                    estib.includes(w.name) ? 'bg-[#2563c4] border-[#2563c4] text-white' : 'border-[#8fa3b1]/40 text-[#8fa3b1]'
+                  }`}>
+                  {w.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      <button onClick={handleSave} disabled={saving || !naveId || !provider || !product}
+        className="touch-target w-full rounded-xl bg-[#1a3a8f] text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+        <ClipboardList size={15} /> {saving ? 'Guardando...' : 'Guardar Registro'}
+      </button>
     </div>
   )
 }
