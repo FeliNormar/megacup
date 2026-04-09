@@ -1,5 +1,23 @@
 import { useMemo } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { fmtTime, fmtDuration } from '../utils/time'
+
+async function clearCacheAndReload() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(regs.map((r) => r.unregister()))
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map((k) => caches.delete(k)))
+    }
+    localStorage.removeItem('app_version')
+  } catch (e) {
+    console.warn(e)
+  }
+  window.location.reload()
+}
 
 export default function WorkerPanel({ records = [], workerName }) {
   // Solo registros donde participó este operador
@@ -97,6 +115,14 @@ export default function WorkerPanel({ records = [], workerName }) {
           </div>
         ))
       )}
+
+      {/* Botón limpiar caché */}
+      <button
+        onClick={clearCacheAndReload}
+        className="w-full rounded-xl border border-orange-400 text-orange-500 font-semibold text-sm flex items-center justify-center gap-2 py-3"
+      >
+        <RefreshCw size={15} /> ¿No ves tus datos? Limpiar caché
+      </button>
     </div>
   )
 }
