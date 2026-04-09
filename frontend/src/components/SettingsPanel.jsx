@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Plus, Trash2, Save, ChevronDown, ChevronUp, Package, Users, Warehouse, Lock, Eye, EyeOff } from 'lucide-react'
+import { Plus, Trash2, Save, ChevronDown, ChevronUp, Package, Users, Warehouse, Lock, Eye, EyeOff, RefreshCw } from 'lucide-react'
 
 function uid() { return `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` }
 
@@ -310,6 +310,31 @@ export default function SettingsPanel({ workers, naves, providers, adminCred, on
           <Save size={15} /> Guardar Credenciales
         </button>
         {msg && <p className="text-xs text-center text-[#2563c4]">{msg}</p>}
+      </Section>
+
+      <Section icon={RefreshCw} title="Mantenimiento">
+        <p className="text-xs text-[#8fa3b1]">Si la app no carga bien o muestra datos desactualizados, limpia el caché del navegador.</p>
+        <button
+          onClick={async () => {
+            try {
+              if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations()
+                await Promise.all(regs.map((r) => r.unregister()))
+              }
+              if ('caches' in window) {
+                const keys = await caches.keys()
+                await Promise.all(keys.map((k) => caches.delete(k)))
+              }
+              localStorage.removeItem('app_version')
+            } catch (e) {
+              console.warn(e)
+            }
+            window.location.reload()
+          }}
+          className="touch-target w-full rounded-xl bg-orange-500 text-white font-semibold text-sm flex items-center justify-center gap-2"
+        >
+          <RefreshCw size={15} /> Limpiar caché y recargar
+        </button>
       </Section>
     </div>
   )
