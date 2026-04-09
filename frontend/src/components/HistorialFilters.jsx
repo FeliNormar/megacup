@@ -182,16 +182,29 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
   const [descarg,    setDescarg]    = useState(r.descargadores  || [])
   const [estib,      setEstib]      = useState(r.estibadores    || [])
 
+  // Convertir timestamps a formato datetime-local
+  const toDatetimeLocal = (ts) => {
+    if (!ts) return ''
+    const d = new Date(ts)
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+  const [startVal, setStartVal] = useState(() => toDatetimeLocal(r.startTime))
+  const [endVal,   setEndVal]   = useState(() => toDatetimeLocal(r.endTime))
+
   const toggleDescarg = (name) => setDescarg((p) => p.includes(name) ? p.filter((x) => x !== name) : [...p, name])
   const toggleEstib   = (name) => setEstib((p)   => p.includes(name) ? p.filter((x) => x !== name) : [...p, name])
 
   const saveCajas = () => {
-    onEditCajas(r.id, {
+    const changes = {
       cajasEstimadas: cajasEst  ? Number(cajasEst)  : null,
       cajasReales:    cajasReal ? Number(cajasReal) : null,
       descargadores:  descarg,
       estibadores:    estib,
-    })
+    }
+    if (startVal) changes.startTime = new Date(startVal).getTime()
+    if (endVal)   changes.endTime   = new Date(endVal).getTime()
+    onEditCajas(r.id, changes)
     setEditCajas(false)
   }
   return (
@@ -249,6 +262,14 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
               placeholder="Cajas est." className="w-24 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
             <input type="number" value={cajasReal} onChange={(e) => setCajasReal(e.target.value)}
               placeholder="Cajas real" className="w-24 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-[#8fa3b1] font-semibold">🕐 Hora inicio:</p>
+            <input type="datetime-local" value={startVal} onChange={(e) => setStartVal(e.target.value)}
+              className="w-full rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+            <p className="text-xs text-[#8fa3b1] font-semibold">🕐 Hora fin:</p>
+            <input type="datetime-local" value={endVal} onChange={(e) => setEndVal(e.target.value)}
+              className="w-full rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
           </div>
           {workers.length > 0 && (
             <>

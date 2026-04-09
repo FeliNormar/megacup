@@ -366,6 +366,9 @@ export function useAppState() {
     if (changes.product         !== undefined) supabaseChanges.product             = changes.product
     if (changes.po              !== undefined) supabaseChanges.po                  = changes.po
     if (changes.workers         !== undefined) supabaseChanges.workers             = changes.workers
+    // Horas de inicio y fin
+    if (changes.startTime       !== undefined) supabaseChanges.startTime           = changes.startTime
+    if (changes.endTime         !== undefined) supabaseChanges.endTime             = changes.endTime
     // Campos que ya vienen en snake_case desde HistorialFilters
     if (changes.cajas_estimadas     !== undefined) supabaseChanges.cajas_estimadas     = changes.cajas_estimadas
     if (changes.cajas_reales        !== undefined) supabaseChanges.cajas_reales        = changes.cajas_reales
