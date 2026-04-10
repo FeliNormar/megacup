@@ -137,9 +137,13 @@ export default function WeeklyAnalytics({ records = [], dark }) {
       {/* Tarjetas de métricas */}
       {metrics && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <MetricCard label="Horas esta semana"    value={metrics.horas} />
-          <MetricCard label="Descargas"            value={metrics.descargas} />
-          <MetricCard label="Promedio/descarga"    value={metrics.promedio} />
+          {/* Tarjeta principal destacada */}
+          <div className="col-span-2 sm:col-span-1 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-4 shadow text-white">
+            <p className="text-xs text-indigo-200 mb-1">Horas esta semana</p>
+            <p className="font-black text-2xl">{metrics.horas}</p>
+          </div>
+          <MetricCard label="Descargas"         value={metrics.descargas} />
+          <MetricCard label="Promedio/descarga" value={metrics.promedio} />
           <MetricCard
             label="vs semana anterior"
             value={metrics.delta !== null
@@ -225,21 +229,24 @@ export default function WeeklyAnalytics({ records = [], dark }) {
         {ranking.length === 0
           ? <p className="text-[#8fa3b1] text-sm text-center py-3">Sin datos esta semana</p>
           : <div className="space-y-3">
-              {ranking.map((w, i) => (
-                <div key={w.name} className="rounded-xl border border-[#8fa3b1]/20 p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-bold text-[#8fa3b1]">#{i + 1}</span>
-                    <span className="font-bold text-sm flex-1">{w.name}</span>
-                    <span className="text-sm font-bold text-[#1a3a8f] dark:text-[#8fa3b1]">{formatDuration(w.totalSeg)}</span>
+              {ranking.map((w, i) => {
+                const medals = ['🥇', '🥈', '🥉']
+                return (
+                  <div key={w.name} className={`rounded-xl border p-3 ${i === 0 ? 'border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/10' : 'border-[#8fa3b1]/20'}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">{medals[i] || `#${i+1}`}</span>
+                      <span className="font-bold text-sm flex-1">{w.name}</span>
+                      <span className="text-sm font-bold text-[#1a3a8f] dark:text-[#8fa3b1]">{formatDuration(w.totalSeg)}</span>
+                    </div>
+                    <div className="flex gap-3 text-xs text-[#8fa3b1]">
+                      <span>{w.descargas} descargas</span>
+                      <span>Prom: {formatDuration(w.totalSeg / w.descargas)}</span>
+                      {w.incidencias > 0 && <span className="text-red-400">{w.incidencias} incid.</span>}
+                      <span>{w.diasTrabajados} de {dias.length} días</span>
+                    </div>
                   </div>
-                  <div className="flex gap-3 text-xs text-[#8fa3b1]">
-                    <span>{w.descargas} descargas</span>
-                    <span>Prom: {formatDuration(w.totalSeg / w.descargas)}</span>
-                    {w.incidencias > 0 && <span className="text-red-400">{w.incidencias} incid.</span>}
-                    <span>{w.diasTrabajados} de {dias.length} días</span>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
         }
       </div>
