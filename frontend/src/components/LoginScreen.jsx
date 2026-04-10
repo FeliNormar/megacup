@@ -1,7 +1,13 @@
 import React, { useState } from 'react'
-import { Lock, User, ChevronRight, Eye, EyeOff, Loader } from 'lucide-react'
+import { Lock, User, ChevronRight, Eye, EyeOff, Loader, HardHat, Package, ShieldCheck } from 'lucide-react'
 import { verifyPassword, saveSession } from '../utils/auth'
 import { supabase } from '../utils/supabase'
+
+const MODES = [
+  { id: 'worker',  label: 'Operador', icon: HardHat },
+  { id: 'almacen', label: 'Almacén',  icon: Package },
+  { id: 'admin',   label: 'Admin',    icon: ShieldCheck },
+]
 
 function getDeviceInfo() {
   const ua = navigator.userAgent
@@ -95,17 +101,14 @@ export default function LoginScreen({ workers, adminCred, almacenCred, onLogin }
       </div>
 
       <div className="w-full max-w-sm bg-[#162050] rounded-2xl p-6 shadow-2xl border border-[#8fa3b1]/20 space-y-4">
-        {/* Toggle */}
+        {/* Toggle con íconos */}
         <div className="flex rounded-xl overflow-hidden border border-[#8fa3b1]/30">
-          {[
-            ['worker', 'Operador'],
-            ['almacen', 'Almacén'],
-            ['admin', 'Admin']
-          ].map(([m, label]) => (
-            <button key={m} onClick={() => { setMode(m); clear() }}
-              className={`flex-1 py-2.5 text-[11px] font-semibold transition-colors ${
-                mode === m ? 'bg-[#1a3a8f] text-white' : 'text-[#8fa3b1]'
+          {MODES.map(({ id, label, icon: Icon }) => (
+            <button key={id} onClick={() => { setMode(id); clear() }}
+              className={`flex-1 flex flex-col items-center py-2.5 gap-1 text-[11px] font-semibold transition-colors ${
+                mode === id ? 'bg-[#1a3a8f] text-white' : 'text-[#8fa3b1]'
               }`}>
+              <Icon size={16} />
               {label}
             </button>
           ))}
@@ -146,7 +149,12 @@ export default function LoginScreen({ workers, adminCred, almacenCred, onLogin }
           </div>
         </div>
 
-        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+        {error && (
+          <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2.5">
+            <span className="text-red-400 text-lg">⚠️</span>
+            <p className="text-red-400 text-sm font-medium">{error}</p>
+          </div>
+        )}
 
         <button onClick={handle}
           disabled={loading}
