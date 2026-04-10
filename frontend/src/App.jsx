@@ -339,15 +339,35 @@ function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, up
 
   return (
     <>
-      {open && <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setOpen(false)} />}
+      {/* Overlay */}
+      {open && <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />}
 
-      {open && (
-        <div className="fixed bottom-20 right-4 z-50 bg-white dark:bg-[#162050] rounded-2xl shadow-2xl border border-[#8fa3b1]/20 overflow-hidden w-64 max-h-[70vh] overflow-y-auto">
-          <div className="px-4 py-3 border-b border-[#8fa3b1]/20 flex items-center justify-between">
-            <span className="font-bold text-sm text-[#1a3a8f] dark:text-white">Configuración</span>
-            <button onClick={() => setOpen(false)}><X size={16} className="text-[#8fa3b1]" /></button>
+      {/* Panel pantalla completa con slide-up */}
+      <div className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-out ${open ? 'translate-y-0' : 'translate-y-full'}`}
+        style={{ maxHeight: '92vh' }}>
+        <div className="bg-white dark:bg-[#0d1b3e] rounded-t-3xl shadow-2xl flex flex-col h-full" style={{ maxHeight: '92vh' }}>
+          {/* Handle + Header */}
+          <div className="flex flex-col items-center pt-3 pb-2 px-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
+            <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600 mb-3" />
+            <div className="w-full flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-indigo-600">
+                  <Settings size={16} className="text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-800 dark:text-white text-base leading-none">Configuración</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Administrador</p>
+                </div>
+              </div>
+              <button onClick={() => setOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                <X size={16} className="text-slate-500 dark:text-slate-300" />
+              </button>
+            </div>
           </div>
-          <div className="p-3">
+
+          {/* Contenido scrollable */}
+          <div className="overflow-y-auto flex-1 p-4">
             <SettingsPanel
               workers={workers}
               naves={naves}
@@ -361,11 +381,12 @@ function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, up
             />
           </div>
         </div>
-      )}
+      </div>
 
+      {/* Botón flotante */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-16 right-4 z-40 w-12 h-12 rounded-full shadow-lg flex items-center justify-center"
+        className="fixed bottom-16 right-4 z-40 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-90"
         style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}
       >
         {open ? <X size={20} className="text-white" /> : <Settings size={20} className="text-white" />}
