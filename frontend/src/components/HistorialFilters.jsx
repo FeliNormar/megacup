@@ -208,7 +208,9 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
     setEditCajas(false)
   }
   return (
-    <div className="rounded-xl border border-[#8fa3b1]/20 p-3 text-sm bg-white dark:bg-[#162050]">
+    <div className={`rounded-xl border p-3 text-sm bg-white dark:bg-[#162050] ${
+      r.status === 'incident' ? 'border-red-300 dark:border-red-800' : 'border-[#8fa3b1]/20'
+    }`}>
       <div className="flex items-center justify-between mb-1">
         <span className="font-bold text-[#1a3a8f] dark:text-white">{r.naveName || r.naveId}</span>
         <div className="flex items-center gap-2">
