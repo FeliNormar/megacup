@@ -121,6 +121,11 @@ export function useAppState() {
           setAlmacenCred(almacenData.value)
           ls.set('mc_almacen', almacenData.value)
         }
+        const { data: fraseData } = await supabase.from('config').select('value').eq('key', 'frase').single()
+        if (fraseData?.value) {
+          setFrase(fraseData.value)
+          ls.set('mc_frase', fraseData.value)
+        }
       } catch (err) {
         console.error('Error cargando datos de Supabase:', err)
       }
@@ -174,7 +179,17 @@ export function useAppState() {
   useEffect(() => { ls.set('mc_providers',   providers)   }, [providers])
   useEffect(() => { ls.set('mc_admin',   adminCred)   }, [adminCred])
   useEffect(() => { ls.set('mc_almacen', almacenCred) }, [almacenCred])
-  useEffect(() => { ls.set('mc_frase',   frase)       }, [frase])
+  useEffect(() => { ls.set('mc_frase', frase) }, [frase])
+
+  const updateFrase = async (nuevaFrase) => {
+    setFrase(nuevaFrase)
+    ls.set('mc_frase', nuevaFrase)
+    try {
+      await supabase.from('config').upsert({ key: 'frase', value: nuevaFrase })
+    } catch (err) {
+      console.error('Error sync frase:', err)
+    }
+  }
 
   // Guarda workers en Supabase al cambiar — hashea contraseñas nuevas
   const updateWorkers = async (newWorkers) => {
@@ -453,6 +468,7 @@ export function useAppState() {
     updateAdmin,
     importRecord,
     frase, setFrase,
+    updateFrase,
 
     // Derivados
     visibleAssignments,
