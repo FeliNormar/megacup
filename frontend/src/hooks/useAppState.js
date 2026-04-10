@@ -246,6 +246,7 @@ export function useAppState() {
   }
 
   const createDescarga = async (data) => {
+    const assignment = { id: uid(), ...data, startTime: Date.now(), status: 'active' }
     setAssignments((prev) => ({ ...prev, [data.naveId]: assignment }))
     // Mapear camelCase a snake_case para Supabase
     const row = {
