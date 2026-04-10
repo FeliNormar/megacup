@@ -52,6 +52,7 @@ export default function App() {
     editAssignment,
     editRecord,
     importRecord,
+    frase, setFrase,
   } = useAppState()
 
   const online = useOnlineStatus()
@@ -71,6 +72,7 @@ export default function App() {
         workers={workers}
         adminCred={adminCred}
         almacenCred={almacenCred}
+        frase={frase}
         onLogin={setSession}
       />
     )
@@ -198,6 +200,8 @@ export default function App() {
         setProviders={setProviders}
         updateAdmin={updateAdmin}
         importRecord={importRecord}
+        frase={frase}
+        setFrase={setFrase}
       />}
 
       {/* Botón limpiar caché flotante — todos los roles */}
@@ -334,7 +338,7 @@ function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, online, activeCou
   )
 }
 
-function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, updateWorkers, setNaves, setProviders, updateAdmin, importRecord }) {
+function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, updateWorkers, setNaves, setProviders, updateAdmin, importRecord, frase, setFrase }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -378,6 +382,8 @@ function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, up
               onUpdateProviders={setProviders}
               onUpdateAdmin={updateAdmin}
               onImportRecord={importRecord}
+              frase={frase}
+              setFrase={setFrase}
             />
           </div>
         </div>

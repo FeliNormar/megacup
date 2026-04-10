@@ -35,7 +35,7 @@ function getDeviceInfo() {
   return `${device}${browser ? ' / ' + browser : ''}`
 }
 
-export default function LoginScreen({ workers, adminCred, almacenCred, onLogin }) {
+export default function LoginScreen({ workers, adminCred, almacenCred, onLogin, frase }) {
   const [mode,     setMode]     = useState('worker')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -95,9 +95,15 @@ export default function LoginScreen({ workers, adminCred, almacenCred, onLogin }
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#0d1b3e] p-6">
       {/* Logo */}
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <img src="/logo.png" alt="MEGA CUP" className="h-32 mx-auto mb-2 drop-shadow-xl" />
         <div className="text-[#8fa3b1] text-sm mt-1">Sistema de Gestión de Bodegas</div>
+        {/* Frase motivacional */}
+        {frase && (
+          <div className="mt-4 mx-auto max-w-xs px-4 py-3 rounded-2xl bg-white/5 border border-white/10">
+            <p className="text-[#8fa3b1] text-xs italic leading-relaxed">"{frase}"</p>
+          </div>
+        )}
       </div>
 
       <div className="w-full max-w-sm bg-[#162050] rounded-2xl p-6 shadow-2xl border border-[#8fa3b1]/20 space-y-4">
@@ -163,6 +169,12 @@ export default function LoginScreen({ workers, adminCred, almacenCred, onLogin }
           {loading ? <Loader size={17} className="animate-spin" /> : (mode === 'admin' ? <Lock size={17} /> : <User size={17} />)}
           {loading ? 'Verificando...' : 'Ingresar'} {!loading && <ChevronRight size={16} />}
         </button>
+      </div>
+
+      {/* Créditos */}
+      <div className="mt-6 text-center">
+        <p className="text-[#8fa3b1]/50 text-[10px]">© {new Date().getFullYear()} ING Felipe Norberto Marcelino</p>
+        <p className="text-[#8fa3b1]/40 text-[10px]">Todos los derechos reservados</p>
       </div>
     </div>
   )

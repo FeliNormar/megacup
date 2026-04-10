@@ -35,3 +35,5 @@ export const DEFAULT_ALMACENISTA = {
   username: 'almacen',
   pin:      '1234',
 }
+
+export const DEFAULT_FRASE = 'El paso de la envidia a la admiración es un camino llamado esfuerzo.'

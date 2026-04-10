@@ -6,6 +6,7 @@ import {
   DEFAULT_NAVES,
   DEFAULT_PROVIDERS,
   DEFAULT_ADMIN,
+  DEFAULT_FRASE,
 } from '../constants/defaults'
 import { supabase } from '../utils/supabase'
 import { loadSession, clearSession, hashPassword } from '../utils/auth'
@@ -57,6 +58,7 @@ export function useAppState() {
   const [providers, setProviders] = useState(() => ls.get('mc_providers', DEFAULT_PROVIDERS))
   const [adminCred,   setAdminCred]   = useState(() => ls.get('mc_admin',   DEFAULT_ADMIN))
   const [almacenCred, setAlmacenCred] = useState(() => ls.get('mc_almacen', { username: 'almacen', pin: '1234' }))
+  const [frase,       setFrase]       = useState(() => ls.get('mc_frase', DEFAULT_FRASE))
 
   const [assignments, setAssignments] = useState({})
   const [records,      setRecords]      = useState(() => ls.get('mc_records', []))
@@ -172,6 +174,7 @@ export function useAppState() {
   useEffect(() => { ls.set('mc_providers',   providers)   }, [providers])
   useEffect(() => { ls.set('mc_admin',   adminCred)   }, [adminCred])
   useEffect(() => { ls.set('mc_almacen', almacenCred) }, [almacenCred])
+  useEffect(() => { ls.set('mc_frase',   frase)       }, [frase])
 
   // Guarda workers en Supabase al cambiar — hashea contraseñas nuevas
   const updateWorkers = async (newWorkers) => {
@@ -449,6 +452,7 @@ export function useAppState() {
     updateWorkers,
     updateAdmin,
     importRecord,
+    frase, setFrase,
 
     // Derivados
     visibleAssignments,
