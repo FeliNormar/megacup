@@ -4,6 +4,7 @@ import { LayoutDashboard, BarChart2, History, PlusCircle, Settings, LogOut, Sun,
 import { useAppState }     from './hooks/useAppState'
 import { useRealtime }     from './hooks/useRealtime'
 import { useOnlineStatus } from './hooks/useOnlineStatus'
+import { useVersionCheck } from './hooks/useVersionCheck'
 import LoginScreen         from './components/LoginScreen'
 import NaveCard            from './components/NaveCard'
 import NewDescarga         from './components/NewDescarga'
@@ -54,6 +55,7 @@ export default function App() {
   } = useAppState()
 
   const online = useOnlineStatus()
+  useVersionCheck()
 
   useRealtime({
     session,
