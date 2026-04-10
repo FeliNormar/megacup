@@ -201,7 +201,7 @@ export default function App() {
         updateAdmin={updateAdmin}
         importRecord={importRecord}
         frase={frase}
-        setFrase={setFrase}
+        setFrase={updateFrase}
       />}
 
       {/* Botón limpiar caché flotante — todos los roles */}
