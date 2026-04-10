@@ -371,7 +371,7 @@ function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, up
           </div>
 
           {/* Contenido scrollable */}
-          <div className="overflow-y-auto flex-1 p-4">
+          <div className="overflow-y-auto flex-1 p-4 pb-8">
             <SettingsPanel
               workers={workers}
               naves={naves}
@@ -392,7 +392,7 @@ function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, up
       {/* Botón flotante */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-16 right-4 z-40 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-90"
+        className="fixed bottom-20 right-4 z-40 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-90"
         style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}
       >
         {open ? <X size={20} className="text-white" /> : <Settings size={20} className="text-white" />}
@@ -423,7 +423,7 @@ function ClearCacheButton() {
     <button
       onClick={handleClear}
       title="Limpiar caché y recargar"
-      className="fixed bottom-16 right-20 z-40 w-8 h-8 rounded-full shadow flex items-center justify-center bg-orange-400/70 hover:bg-orange-500 transition-colors"
+      className="fixed bottom-20 right-20 z-40 w-8 h-8 rounded-full shadow flex items-center justify-center bg-orange-400/70 hover:bg-orange-500 transition-colors"
     >
       <RefreshCw size={14} className="text-white" />
     </button>
