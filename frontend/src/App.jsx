@@ -53,7 +53,6 @@ export default function App() {
     editRecord,
     importRecord,
     frase, setFrase,
-    updateFrase,
   } = useAppState()
 
   const online = useOnlineStatus()
@@ -384,7 +383,7 @@ function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, up
               onUpdateAdmin={updateAdmin}
               onImportRecord={importRecord}
               frase={frase}
-              setFrase={updateFrase}
+              setFrase={setFrase}
             />
           </div>
         </div>
