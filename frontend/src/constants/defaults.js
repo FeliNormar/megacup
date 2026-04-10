@@ -36,4 +36,4 @@ export const DEFAULT_ALMACENISTA = {
   pin:      '1234',
 }
 
-export const DEFAULT_FRASE = '"El único modo de hacer un gran trabajo es amar lo que haces." – Steve Jobs'
+export const DEFAULT_FRASE = 'El paso de la envidia a la admiración es un camino llamado esfuerzo.'
