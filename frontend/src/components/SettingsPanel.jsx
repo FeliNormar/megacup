@@ -39,18 +39,28 @@ function Accordion({ id, openId, setOpenId, icon: Icon, title, badge, children }
 // ── Naves como badges en grid ─────────────────────────────────────────────────
 function NavesList({ naves, onChange }) {
   const [input, setInput] = useState('')
+  const [deleteId, setDeleteId] = useState(null) // nave en modo "listo para borrar"
+
   const add = () => { const v = input.trim(); if (!v) return; onChange([...naves, { id: uid(), name: v }]); setInput('') }
+
+  const handleLongPress = (id) => {
+    if ('vibrate' in navigator) navigator.vibrate(80)
+    setDeleteId(id)
+  }
+
   return (
     <div className="space-y-3">
+      <p className="text-xs text-slate-400">Mantén presionado una nave para eliminarla.</p>
       <div className="grid grid-cols-3 gap-2">
         {naves.map((n) => (
-          <div key={n.id} className="relative flex items-center justify-center rounded-xl border-2 border-indigo-100 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-900/20 py-3 px-2 text-center">
-            <span className="font-bold text-sm text-indigo-700 dark:text-indigo-300 truncate">{n.name}</span>
-            <button onClick={() => onChange(naves.filter((x) => x.id !== n.id))}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center shadow">
-              <Trash2 size={9} />
-            </button>
-          </div>
+          <LongPressNave
+            key={n.id}
+            nave={n}
+            isDeleting={deleteId === n.id}
+            onLongPress={() => handleLongPress(n.id)}
+            onCancel={() => setDeleteId(null)}
+            onDelete={() => { onChange(naves.filter((x) => x.id !== n.id)); setDeleteId(null) }}
+          />
         ))}
       </div>
       <div className="flex gap-2">
@@ -58,6 +68,49 @@ function NavesList({ naves, onChange }) {
           placeholder="Nueva nave..." className="flex-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-indigo-400" />
         <button onClick={add} className="px-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"><Plus size={16} /></button>
       </div>
+    </div>
+  )
+}
+
+function LongPressNave({ nave, isDeleting, onLongPress, onCancel, onDelete }) {
+  const timerRef = React.useRef(null)
+
+  const startPress = () => {
+    timerRef.current = setTimeout(() => onLongPress(), 600)
+  }
+  const cancelPress = () => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+  }
+
+  if (isDeleting) {
+    return (
+      <div className="relative flex flex-col items-center justify-center rounded-xl border-2 border-red-400 bg-red-50 dark:bg-red-900/20 py-3 px-2 text-center gap-1">
+        <span className="font-bold text-sm text-red-600 dark:text-red-400 truncate">{nave.name}</span>
+        <div className="flex gap-1">
+          <button onClick={onDelete}
+            className="px-2 py-0.5 rounded-lg bg-red-500 text-white text-xs font-bold">
+            <Trash2 size={11} />
+          </button>
+          <button onClick={onCancel}
+            className="px-2 py-0.5 rounded-lg bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-200 text-xs">
+            ✕
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      onMouseDown={startPress}
+      onMouseUp={cancelPress}
+      onMouseLeave={cancelPress}
+      onTouchStart={startPress}
+      onTouchEnd={cancelPress}
+      onTouchCancel={cancelPress}
+      className="relative flex items-center justify-center rounded-xl border-2 border-indigo-100 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-900/20 py-3 px-2 text-center cursor-pointer select-none active:scale-95 transition-transform"
+    >
+      <span className="font-bold text-sm text-indigo-700 dark:text-indigo-300 truncate">{nave.name}</span>
     </div>
   )
 }
