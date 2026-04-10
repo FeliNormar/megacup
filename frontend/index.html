@@ -14,6 +14,28 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <title>MEGA CUP - Bodegas</title>
+    <!-- Auto-limpieza de caché al cargar -->
+    <script>
+      (function() {
+        var APP_VERSION = '1.1.4';
+        var stored = localStorage.getItem('app_version');
+        if (stored !== APP_VERSION) {
+          localStorage.setItem('app_version', APP_VERSION);
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              keys.forEach(function(k) { caches.delete(k); });
+            });
+          }
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              regs.forEach(function(r) { r.unregister(); });
+            });
+          }
+          // Solo recargar si había una versión anterior (no primera visita)
+          if (stored) { window.location.reload(true); }
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
