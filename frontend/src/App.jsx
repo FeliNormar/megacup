@@ -182,6 +182,7 @@ export default function App() {
         isAdmin={isAdmin}
         isAlmacenista={isAlmacenista}
         online={online}
+        activeCount={visibleAssignments.length}
       />
 
       {/* Menú hamburguesa config — solo admin */}
@@ -287,11 +288,14 @@ function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers
 function EmptyState({ isAdmin, isAlmacenista }) {
   return (
     <div className="text-center py-16 text-[#8fa3b1]">
-      <div className="text-5xl mb-3">📦</div>
-      <p className="text-lg font-semibold">
+      <div className="relative inline-block mb-4">
+        <div className="text-7xl animate-bounce">📦</div>
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-12 h-2 bg-black/10 dark:bg-white/10 rounded-full blur-sm" />
+      </div>
+      <p className="text-lg font-semibold text-slate-600 dark:text-slate-300">
         {(isAdmin || isAlmacenista) ? 'Sin descargas activas' : 'No tienes descargas asignadas'}
       </p>
-      <p className="text-sm mt-1">
+      <p className="text-sm mt-1 max-w-xs mx-auto">
         {isAdmin
           ? 'Presiona "Nueva Descarga" para comenzar.'
           : (isAlmacenista ? 'Espera a que el administrador cree una descarga.' : 'El administrador te asignará cuando haya un trailer.')}
@@ -300,7 +304,7 @@ function EmptyState({ isAdmin, isAlmacenista }) {
   )
 }
 
-function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, online }) {
+function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, online, activeCount }) {
   const items = NAV_ITEMS.filter((item) => {
     if (item.id === 'new') return isAdmin
     if (item.id === 'analytics' || item.id === 'history') return isAdmin || isAlmacenista
@@ -312,10 +316,17 @@ function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, online }) {
       {items.map(({ id, icon: Icon, label }) => (
         <button key={id} onClick={() => onTabChange(id)}
           disabled={id === 'new' && !online}
-          className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors disabled:opacity-40 ${
+          className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors disabled:opacity-40 relative ${
             tab === id ? 'text-[#1a3a8f] dark:text-[#8fa3b1]' : 'text-gray-400'
           }`}>
-          <Icon size={22} />
+          <div className="relative">
+            <Icon size={22} />
+            {id === 'dashboard' && activeCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center">
+                {activeCount}
+              </span>
+            )}
+          </div>
           {label}
         </button>
       ))}
@@ -385,9 +396,9 @@ function ClearCacheButton() {
     <button
       onClick={handleClear}
       title="Limpiar caché y recargar"
-      className="fixed bottom-16 right-20 z-40 w-12 h-12 rounded-full shadow-lg flex items-center justify-center bg-orange-500"
+      className="fixed bottom-16 right-20 z-40 w-8 h-8 rounded-full shadow flex items-center justify-center bg-orange-400/70 hover:bg-orange-500 transition-colors"
     >
-      <RefreshCw size={20} className="text-white" />
+      <RefreshCw size={14} className="text-white" />
     </button>
   )
 }

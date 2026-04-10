@@ -4,12 +4,56 @@ import { useTimer } from '../hooks/useTimer'
 import { fmtElapsed } from '../utils/time'
 import { supabase } from '../utils/supabase'
 
-export default function NaveCard({ nave, assignment, isWorker, isAdmin, providers, workers, naves, onFinish, onIncident, onDelete, onEdit }) {  const [confirmAction,  setConfirmAction]  = useState(null)
+// Colores del cronómetro según tiempo transcurrido vs promedio estimado
+function timerColor(elapsed, cajasEstimadas) {
+  // Sin referencia: verde hasta 2h, amarillo hasta 3h, rojo después
+  const h = elapsed / 3600000
+  const limit = cajasEstimadas ? Math.max(1, cajasEstimadas / 300) : 2 // ~300 cajas/hora referencia
+  if (h < limit * 0.75) return 'text-green-400'
+  if (h < limit)        return 'text-yellow-400'
+  return 'text-red-400 animate-pulse'
+}
+
+// Avatares de operadores
+function WorkerAvatars({ names = [] }) {
+  if (!names.length) return null
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {names.map((name) => (
+        <div key={name} className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 border-2 border-white dark:border-[#162050] flex items-center justify-center" title={name}>
+          <span className="text-xs font-bold text-indigo-600 dark:text-indigo-300">{name[0].toUpperCase()}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Barra de progreso de cajas
+function ProgressBar({ cajasEstimadas, cajasReales }) {
+  if (!cajasEstimadas) return null
+  const pct = cajasReales ? Math.min(100, Math.round((cajasReales / cajasEstimadas) * 100)) : 0
+  const color = pct >= 100 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-400' : 'bg-indigo-500'
+  return (
+    <div className="mt-2">
+      <div className="flex justify-between text-xs text-[#8fa3b1] mb-1">
+        <span>Progreso cajas</span>
+        <span className="font-semibold">{cajasReales || 0} / {cajasEstimadas} ({pct}%)</span>
+      </div>
+      <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
+}
+
+export default function NaveCard({ nave, assignment, isWorker, isAdmin, providers, workers, naves, onFinish, onIncident, onDelete, onEdit }) {
+  const [confirmAction,  setConfirmAction]  = useState(null)
   const [showEdit,       setShowEdit]       = useState(false)
   const [showDelConfirm, setShowDelConfirm] = useState(false)
   const [showIncident,   setShowIncident]   = useState(false)
   const [showFinish,     setShowFinish]     = useState(false)
   const elapsed = useTimer(assignment.id, assignment.startTime)
+  const tColor  = timerColor(elapsed, assignment.cajasEstimadas)
 
   const handleFinish = (cajasReales) => {
     if ('vibrate' in navigator) navigator.vibrate([100, 50, 100])
@@ -17,8 +61,11 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
     setConfirmAction(null)
   }
 
+  const allWorkers = [...new Set([...(assignment.descargadores || []), ...(assignment.estibadores || []), ...(assignment.workers || [])])]
+
   return (
     <div className="rounded-2xl shadow-lg border border-[#8fa3b1]/20 bg-white dark:bg-[#162050] overflow-hidden">
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3" style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}>
         <div className="flex items-center gap-2">
           <Truck size={18} className="text-white/80" />
@@ -36,8 +83,8 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
             </>
           )}
           <div className="flex items-center gap-1 bg-white/10 rounded-xl px-3 py-1">
-            <Clock size={14} className="text-white/80" />
-            <span className="text-white font-mono font-bold text-sm">{fmtElapsed(elapsed)}</span>
+            <Clock size={14} className={tColor} />
+            <span className={`font-mono font-bold text-sm ${tColor}`}>{fmtElapsed(elapsed)}</span>
           </div>
         </div>
       </div>
@@ -47,35 +94,50 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
         <InfoRow icon={<Package size={14} />} label="Producto"  value={assignment.product}  />
         {assignment.po && <InfoRow icon={<Package size={14} />} label="PO" value={assignment.po} />}
         {assignment.tipoCarga && <InfoRow icon={<Package size={14} />} label="Tipo" value={assignment.tipoCarga} />}
-        {assignment.cajasEstimadas && <InfoRow icon={<Package size={14} />} label="Cajas est." value={String(assignment.cajasEstimadas)} />}
-        {assignment.descargadores?.length > 0
-          ? <InfoRow icon={<Users size={14} />} label="Descarga" value={assignment.descargadores.join(', ')} />
-          : assignment.workers?.length > 0 && <InfoRow icon={<Users size={14} />} label="Personal" value={assignment.workers.join(', ')} />
-        }
+
+        {/* Avatares de operadores */}
+        {allWorkers.length > 0 && (
+          <div className="flex items-center gap-2 pt-1">
+            <Users size={14} className="text-[#8fa3b1] shrink-0" />
+            <WorkerAvatars names={allWorkers} />
+          </div>
+        )}
+        {assignment.descargadores?.length > 0 && (
+          <p className="text-xs text-[#8fa3b1]">📥 {assignment.descargadores.join(', ')}</p>
+        )}
         {assignment.estibadores?.length > 0 && (
-          <InfoRow icon={<Users size={14} />} label="Estiba" value={assignment.estibadores.join(', ')} />
+          <p className="text-xs text-[#8fa3b1]">🏗️ {assignment.estibadores.join(', ')}</p>
         )}
 
-        {/* Botones WhatsApp — solo admin */}
+        {/* Barra de progreso */}
+        <ProgressBar cajasEstimadas={assignment.cajasEstimadas} cajasReales={null} />
+
+        {/* WhatsApp — solo admin */}
         {isAdmin && assignment.workers?.length > 0 && (
           <WhatsAppButtons assignment={assignment} workers={workers} />
         )}
       </div>
 
+      {/* Botones acción */}
       {!isWorker && (
         <div className="px-4 pb-4">
           {confirmAction === 'finish' ? (
             <div className="flex gap-2">
               <button onClick={() => setConfirmAction(null)} className="flex-1 rounded-xl py-2.5 text-sm font-semibold border border-[#8fa3b1]/40 text-[#8fa3b1]">Cancelar</button>
-              <button onClick={() => setShowFinish(true)} className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#ec4899]">Confirmar fin</button>
+              <button onClick={() => setShowFinish(true)} className="flex-2 rounded-xl py-2.5 text-sm font-bold text-white bg-[#ec4899] px-6">Confirmar fin</button>
             </div>
           ) : (
             <div className="flex gap-2">
-              <button onClick={() => setShowIncident(true)} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold border-2 border-[#dc2626] text-[#dc2626]">
+              {/* Incidencia: más pequeño, outline */}
+              <button onClick={() => setShowIncident(true)}
+                className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 px-4 text-sm font-semibold border-2 border-[#dc2626] text-[#dc2626]">
                 <AlertTriangle size={15} /> Incidencia
               </button>
-              <button onClick={() => setConfirmAction('finish')} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold text-white bg-[#ec4899]">
-                <CheckCircle size={15} /> Finalizar
+              {/* Finalizar: más grande, prominente */}
+              <button onClick={() => setConfirmAction('finish')}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-3 text-base font-bold text-white shadow-lg active:scale-95 transition-transform"
+                style={{ background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)' }}>
+                <CheckCircle size={18} /> Finalizar
               </button>
             </div>
           )}
