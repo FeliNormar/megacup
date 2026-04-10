@@ -290,22 +290,6 @@ export default function SettingsPanel({ workers, naves, providers, adminCred, on
         {msg && <p className="text-xs text-center text-indigo-500">{msg}</p>}
       </Accordion>
 
-      <Accordion id="frase" openId={openId} setOpenId={setOpenId} icon={ClipboardList} title="Frase motivacional">
-        <p className="text-xs text-slate-500 dark:text-slate-400">Esta frase aparece en la pantalla de login.</p>
-        <textarea
-          value={fraseEdit}
-          onChange={(e) => setFraseEdit(e.target.value)}
-          rows={3}
-          placeholder="Escribe una frase motivacional..."
-          className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-indigo-400 resize-none"
-        />
-        <button
-          onClick={() => { setFrase(fraseEdit); }}
-          className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm py-2.5 flex items-center justify-center gap-2 transition-colors">
-          <Save size={15} /> Guardar frase
-        </button>
-      </Accordion>
-
       <Accordion id="cache" openId={openId} setOpenId={setOpenId} icon={RefreshCw} title="Mantenimiento">        <p className="text-xs text-slate-500 dark:text-slate-400">Si la app no carga bien o muestra datos desactualizados, limpia el caché.</p>
         <button onClick={async () => {
             try {
