@@ -3,36 +3,36 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 
-// ── Limpieza de service worker y caché al actualizar ─────────────────────────
-const APP_VERSION = '1.1.1' // incrementar en cada deploy importante
+const APP_VERSION = '1.1.3'
 
-async function clearAndReload() {
-  try {
-    // Desregistrar todos los service workers
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations()
-      await Promise.all(regs.map((r) => r.unregister()))
-    }
-    // Limpiar todos los cachés del navegador
-    if ('caches' in window) {
-      const keys = await caches.keys()
-      await Promise.all(keys.map((k) => caches.delete(k)))
-    }
-    // Marcar versión y recargar
-    localStorage.setItem('app_version', APP_VERSION)
-    window.location.reload()
-  } catch (e) {
-    console.warn('Cache clear error:', e)
-  }
-}
-
-const storedVersion = localStorage.getItem('app_version')
-if (storedVersion !== APP_VERSION) {
-  clearAndReload()
-} else {
+function renderApp() {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
       <App />
     </React.StrictMode>
   )
+}
+
+async function clearCacheAndRender() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(regs.map((r) => r.unregister()))
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map((k) => caches.delete(k)))
+    }
+    localStorage.setItem('app_version', APP_VERSION)
+  } catch (e) {
+    console.warn('Cache clear error:', e)
+  }
+  renderApp()
+}
+
+const storedVersion = localStorage.getItem('app_version')
+if (storedVersion !== APP_VERSION) {
+  clearCacheAndRender()
+} else {
+  renderApp()
 }
