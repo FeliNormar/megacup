@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { CheckCircle, AlertTriangle, Clock, Package, Truck, Users, Trash2, Pencil, X, Camera } from 'lucide-react'
 import { useTimer } from '../hooks/useTimer'
 import { fmtElapsed } from '../utils/time'
@@ -375,10 +375,36 @@ function FinishModal({ assignment, onConfirm, onClose }) {
   const [cajasReales, setCajasReales] = useState(
     assignment.cajasEstimadas ? String(assignment.cajasEstimadas) : ''
   )
+  const [comparativa, setComparativa] = useState(null)
+  const [loadingComp, setLoadingComp] = useState(false)
+
+  // Cargar comparativa manifiesto vs capturas
+  useEffect(() => {
+    async function loadComparativa() {
+      setLoadingComp(true)
+      const [{ data: mData }, { data: cData }] = await Promise.all([
+        supabase.from('manifiestos').select('*').eq('assignment_id', assignment.id),
+        supabase.from('capturas').select('*').eq('assignment_id', assignment.id),
+      ])
+      if (!mData?.length) { setLoadingComp(false); return }
+      const result = mData.map(m => {
+        const capturado = (cData || [])
+          .filter(c => c.producto_id === m.producto_id)
+          .reduce((acc, c) => acc + c.cantidad, 0)
+        const diferencia = capturado - m.cantidad_esperada
+        return { ...m, capturado, diferencia }
+      })
+      setComparativa(result)
+      setLoadingComp(false)
+    }
+    loadComparativa()
+  }, [assignment.id])
+
+  const hayFaltantes = comparativa?.some(c => c.diferencia < 0)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-[#162050] rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+      <div className="bg-white dark:bg-[#162050] rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-base text-[#ec4899]">Finalizar Descarga</h3>
           <button onClick={onClose}><X size={18} className="text-[#8fa3b1]" /></button>
@@ -387,10 +413,61 @@ function FinishModal({ assignment, onConfirm, onClose }) {
         {assignment.tipoCarga && (
           <p className="text-xs text-[#8fa3b1]">Tipo de carga: <span className="font-semibold text-slate-700 dark:text-white">{assignment.tipoCarga}</span></p>
         )}
+
+        {/* Comparativa manifiesto vs capturas */}
+        {loadingComp && <p className="text-xs text-[#8fa3b1] text-center">Cargando comparativa...</p>}
+
+        {comparativa?.length > 0 && (
+          <div className="rounded-xl border border-[#8fa3b1]/20 overflow-hidden">
+            <div className="px-3 py-2 bg-[#1a3a8f]/5 dark:bg-[#1a3a8f]/20">
+              <p className="text-xs font-bold text-[#1a3a8f] dark:text-[#8fa3b1] uppercase tracking-wide">📋 Comparativa de productos</p>
+            </div>
+            <div className="divide-y divide-[#8fa3b1]/10">
+              {comparativa.map((item) => (
+                <div key={item.producto_id} className="flex items-center justify-between px-3 py-2.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-white truncate">{item.nombre}</p>
+                    {item.sku && <p className="text-[10px] text-slate-400 font-mono">{item.sku}</p>}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 text-xs">
+                    <div className="text-center">
+                      <p className="text-[10px] text-slate-400">Esperado</p>
+                      <p className="font-bold text-slate-700 dark:text-white">{item.cantidad_esperada}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-slate-400">Capturado</p>
+                      <p className="font-bold text-slate-700 dark:text-white">{item.capturado}</p>
+                    </div>
+                    <div className="text-center min-w-[48px]">
+                      <p className="text-[10px] text-slate-400">Dif.</p>
+                      <p className={`font-black text-sm ${
+                        item.diferencia === 0 ? 'text-green-500' :
+                        item.diferencia > 0  ? 'text-blue-500' : 'text-red-500'
+                      }`}>
+                        {item.diferencia > 0 ? '+' : ''}{item.diferencia}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Alerta de faltantes */}
+        {hayFaltantes && (
+          <div className="flex items-start gap-2 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-xl px-3 py-2.5">
+            <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+              Hay productos con faltantes. Verifica antes de finalizar.
+            </p>
+          </div>
+        )}
+
+        {/* Cajas totales */}
         {assignment.cajasEstimadas && (
           <p className="text-xs text-[#8fa3b1]">Cajas estimadas: <span className="font-semibold text-slate-700 dark:text-white">{assignment.cajasEstimadas}</span></p>
         )}
-
         <div>
           <label className="block text-xs text-[#8fa3b1] font-semibold uppercase mb-1">
             Cajas reales descargadas
