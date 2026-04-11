@@ -29,14 +29,18 @@ export default function CapturaPanel({ assignment, workerName }) {
     }
     load()
 
-    // Realtime: escuchar nuevas capturas
+    // Realtime: escuchar nuevas capturas (sin filtro para evitar errores de replica identity)
     const channel = supabase
       .channel(`capturas-${assignment.id}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'capturas',
-        filter: `assignment_id=eq.${assignment.id}`
       }, (payload) => {
-        setCapturas(prev => [...prev, payload.new])
+        if (payload.new.assignment_id === assignment.id) {
+          setCapturas(prev => {
+            if (prev.find(c => c.id === payload.new.id)) return prev
+            return [...prev, payload.new]
+          })
+        }
       })
       .subscribe()
 

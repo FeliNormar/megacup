@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 
-const APP_VERSION = '1.1.4'
+const APP_VERSION = '1.1.5'
 
 function renderApp() {
   ReactDOM.createRoot(document.getElementById('root')).render(
