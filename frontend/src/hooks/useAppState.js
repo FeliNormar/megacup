@@ -268,6 +268,19 @@ export function useAppState() {
     }
     const { error } = await supabase.from('assignments').insert([row])
     if (error) { console.error('Error guardando descarga:', error); toast('❌ Error al guardar la descarga. Intenta de nuevo.') }
+    // Guardar manifiesto si existe
+    if (data.manifiesto?.length > 0) {
+      const manifRows = data.manifiesto.map(m => ({
+        id:                `${assignment.id}-${m.productoId}`,
+        assignment_id:     assignment.id,
+        producto_id:       m.productoId,
+        nombre:            m.nombre,
+        sku:               m.sku || null,
+        cantidad_esperada: m.cantidadEsperada,
+      }))
+      const { error: mErr } = await supabase.from('manifiestos').insert(manifRows)
+      if (mErr) console.error('Error guardando manifiesto:', mErr)
+    }
     insertLog(assignment.id, session?.workerName || 'admin', 'creada')
   }
 

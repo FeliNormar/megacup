@@ -1,7 +1,12 @@
 ﻿import { useState } from 'react'
-import { X, QrCode, Users, Package, Warehouse, Calendar } from 'lucide-react'
+import { X, QrCode, Users, Package, Warehouse, Calendar, Plus, Minus } from 'lucide-react'
 import QRScanner from './QRScanner'
 import { fmtDateTime } from '../utils/time'
+
+// Normaliza producto — puede ser string (legacy) u objeto nuevo
+const normProd = (p) => typeof p === 'string'
+  ? { id: p, nombre: p, sku: '', tipo: 'Ligero' }
+  : { id: p.id || p.nombre, nombre: p.nombre, sku: p.sku || '', tipo: p.tipo || 'Ligero' }
 
 export default function NewDescarga({ naves, workers, providers, activeNaveIds, adminCred, onSave, onClose, inline }) {
   const [naveId,        setNaveId]        = useState('')
@@ -13,6 +18,7 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
   const [showQR,        setShowQR]        = useState(false)
   const [tipoCarga,     setTipoCarga]     = useState('')
   const [cajasEst,      setCajasEst]      = useState('')
+  const [manifiesto,    setManifiesto]    = useState([]) // [{productoId, nombre, sku, tipo, cantidadEsperada}]
   const [deviceTime]                      = useState(() => Date.now())
 
   const allWorkers = adminCred?.username
@@ -21,10 +27,25 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
 
   const availableNaves = naves.filter((n) => !activeNaveIds.includes(n.id))
   const selProvider    = providers.find((p) => p.name === provider)
-  const products       = selProvider?.products || []
+  const products       = (selProvider?.products || []).map(normProd)
 
   const toggleDesc  = (name) => setDescargadores((p) => p.includes(name) ? p.filter((x) => x !== name) : [...p, name])
   const toggleEstib = (name) => setEstibadores((p)   => p.includes(name) ? p.filter((x) => x !== name) : [...p, name])
+
+  // Manifiesto helpers
+  const addToManifiesto = (prod) => {
+    setManifiesto(prev => {
+      const exists = prev.find(m => m.productoId === prod.id)
+      if (exists) return prev.map(m => m.productoId === prod.id ? { ...m, cantidadEsperada: m.cantidadEsperada + 1 } : m)
+      return [...prev, { productoId: prod.id, nombre: prod.nombre, sku: prod.sku, tipo: prod.tipo, cantidadEsperada: 1 }]
+    })
+  }
+  const updateCantidad = (productoId, val) => {
+    const n = parseInt(val) || 0
+    if (n <= 0) setManifiesto(prev => prev.filter(m => m.productoId !== productoId))
+    else setManifiesto(prev => prev.map(m => m.productoId === productoId ? { ...m, cantidadEsperada: n } : m))
+  }
+  const removeFromManifiesto = (productoId) => setManifiesto(prev => prev.filter(m => m.productoId !== productoId))
 
   const handleQR = ({ provider: p, po: o, product: pr }) => {
     if (p)  setProvider(p)
@@ -50,6 +71,7 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
       estibadores,
       tipoCarga,
       cajasEstimadas: cajasEst ? Number(cajasEst) : null,
+      manifiesto:     manifiesto.length > 0 ? manifiesto : null,
     })
   }
 
@@ -88,22 +110,65 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
         </div>
       </div>
 
-      {/* 3. Producto */}
+      {/* 3. Producto principal + Manifiesto */}
       {provider && (
-        <div>
+        <div className="space-y-3">
           <label className="block text-xs font-bold mb-2 text-[#1a3a8f] dark:text-[#8fa3b1] uppercase tracking-wide">
-            <Package size={12} className="inline mr-1" />Producto del Trailer
+            <Package size={12} className="inline mr-1" />Productos del Tráiler
           </label>
           {products.length === 0
             ? <p className="text-xs text-gray-400 italic">Sin productos. Agrégalos en Configuración.</p>
-            : <div className="flex flex-wrap gap-2">
-                {products.map((pr) => (
-                  <button key={pr} onClick={() => setProduct(pr)}
-                    className={`${btnBase} ${product === pr ? 'bg-[#2563c4] border-[#2563c4] text-white' : 'border-[#8fa3b1]/40 text-gray-700 dark:text-gray-300'}`}>
-                    {pr}
-                  </button>
-                ))}
-              </div>
+            : <>
+                {/* Catálogo — toca para agregar al manifiesto */}
+                <div className="flex flex-wrap gap-2">
+                  {products.map((pr) => {
+                    const inManif = manifiesto.find(m => m.productoId === pr.id)
+                    return (
+                      <button key={pr.id} onClick={() => { addToManifiesto(pr); setProduct(pr.nombre) }}
+                        className={`${btnBase} flex items-center gap-1 ${inManif ? 'bg-[#2563c4] border-[#2563c4] text-white' : 'border-[#8fa3b1]/40 text-gray-700 dark:text-gray-300'}`}>
+                        {pr.nombre}
+                        {pr.sku && <span className="text-[10px] opacity-70">({pr.sku})</span>}
+                        {inManif && <span className="text-[10px] font-bold ml-1">×{inManif.cantidadEsperada}</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Manifiesto — cantidades esperadas */}
+                {manifiesto.length > 0 && (
+                  <div className="rounded-xl border border-[#8fa3b1]/20 overflow-hidden">
+                    <div className="px-3 py-2 bg-[#1a3a8f]/5 dark:bg-[#1a3a8f]/20">
+                      <p className="text-xs font-bold text-[#1a3a8f] dark:text-[#8fa3b1] uppercase tracking-wide">📋 Manifiesto — Cantidades esperadas</p>
+                    </div>
+                    <div className="divide-y divide-[#8fa3b1]/10">
+                      {manifiesto.map((m) => (
+                        <div key={m.productoId} className="flex items-center gap-2 px-3 py-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-slate-700 dark:text-white truncate">{m.nombre}</p>
+                            {m.sku && <p className="text-[10px] text-slate-400 font-mono">{m.sku}</p>}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button onClick={() => updateCantidad(m.productoId, m.cantidadEsperada - 1)}
+                              className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                              <Minus size={10} />
+                            </button>
+                            <input type="number" value={m.cantidadEsperada}
+                              onChange={(e) => updateCantidad(m.productoId, e.target.value)}
+                              className="w-14 text-center rounded-lg border border-[#8fa3b1]/30 bg-transparent text-sm font-bold outline-none focus:border-[#1a3a8f]" />
+                            <button onClick={() => updateCantidad(m.productoId, m.cantidadEsperada + 1)}
+                              className="w-6 h-6 rounded-full bg-[#1a3a8f] flex items-center justify-center text-white">
+                              <Plus size={10} />
+                            </button>
+                            <button onClick={() => removeFromManifiesto(m.productoId)} className="ml-1 text-red-400">
+                              <X size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
           }
         </div>
       )}
