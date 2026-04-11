@@ -1,9 +1,10 @@
 ﻿import { useState, useEffect } from 'react'
-import { CheckCircle, AlertTriangle, Clock, Package, Truck, Users, Trash2, Pencil, X, Camera } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Clock, Package, Truck, Users, Trash2, Pencil, X, Camera, Download } from 'lucide-react'
 import { useTimer } from '../hooks/useTimer'
 import { fmtElapsed } from '../utils/time'
 import { supabase } from '../utils/supabase'
 import CapturaPanel from './CapturaPanel'
+import { exportComparativaExcel } from '../utils/export'
 
 // Colores del cronómetro según tiempo transcurrido vs promedio estimado
 function timerColor(elapsed, cajasEstimadas) {
@@ -376,16 +377,17 @@ function FinishModal({ assignment, onConfirm, onClose }) {
     assignment.cajasEstimadas ? String(assignment.cajasEstimadas) : ''
   )
   const [comparativa, setComparativa] = useState(null)
+  const [capturaLog,  setCapturaLog]  = useState([])
   const [loadingComp, setLoadingComp] = useState(false)
 
-  // Cargar comparativa manifiesto vs capturas
   useEffect(() => {
     async function loadComparativa() {
       setLoadingComp(true)
       const [{ data: mData }, { data: cData }] = await Promise.all([
         supabase.from('manifiestos').select('*').eq('assignment_id', assignment.id),
-        supabase.from('capturas').select('*').eq('assignment_id', assignment.id),
+        supabase.from('capturas').select('*').eq('assignment_id', assignment.id).order('created_at', { ascending: true }),
       ])
+      setCapturaLog(cData || [])
       if (!mData?.length) { setLoadingComp(false); return }
       const result = mData.map(m => {
         const capturado = (cData || [])
@@ -484,6 +486,14 @@ function FinishModal({ assignment, onConfirm, onClose }) {
 
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 rounded-xl py-2.5 text-sm font-semibold border border-[#8fa3b1]/40 text-[#8fa3b1]">Cancelar</button>
+          {comparativa?.length > 0 && (
+            <button
+              onClick={() => exportComparativaExcel(assignment, comparativa, capturaLog)}
+              className="px-3 rounded-xl border border-indigo-400 text-indigo-500 text-sm font-semibold flex items-center gap-1"
+            >
+              <Download size={14} /> Excel
+            </button>
+          )}
           <button
             onClick={() => onConfirm(cajasReales ? Number(cajasReales) : null)}
             className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-[#ec4899]"

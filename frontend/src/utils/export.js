@@ -111,3 +111,57 @@ export function exportToPDF(records, filters = {}) {
   const today2 = new Date().toISOString().slice(0, 10)
   doc.save(`megacup-historial-${today2}.pdf`)
 }
+
+/**
+ * Exporta la comparativa de manifiesto vs capturas a Excel.
+ * @param {object} assignment - La descarga finalizada
+ * @param {array}  comparativa - [{nombre, sku, cantidad_esperada, capturado, diferencia}]
+ * @param {array}  capturas    - Log detallado de capturas [{nombre, sku, cantidad, operador, created_at}]
+ */
+export function exportComparativaExcel(assignment, comparativa, capturas) {
+  const wb   = XLSX.utils.book_new()
+  const date = formatDate12h(assignment.startTime)
+
+  // ── Hoja 1: Resumen comparativa ──────────────────────────────────────────
+  const resumenHeaders = ['Producto', 'SKU', 'Esperado', 'Capturado', 'Diferencia', 'Estado']
+  const resumenRows = comparativa.map(item => [
+    item.nombre,
+    item.sku || '—',
+    item.cantidad_esperada,
+    item.capturado,
+    item.diferencia,
+    item.diferencia === 0 ? '✅ OK' : item.diferencia > 0 ? '📦 Sobrante' : '⚠️ Faltante',
+  ])
+
+  const wsResumen = XLSX.utils.aoa_to_sheet([
+    [`MEGA CUP — Comparativa de Descarga`],
+    [`Nave: ${assignment.naveName || assignment.naveId}  |  Proveedor: ${assignment.provider}  |  Fecha: ${date}`],
+    [],
+    resumenHeaders,
+    ...resumenRows,
+  ])
+
+  // Estilos encabezado
+  wsResumen['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }]
+  wsResumen['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }]
+
+  XLSX.utils.book_append_sheet(wb, wsResumen, 'Comparativa')
+
+  // ── Hoja 2: Log detallado de capturas ────────────────────────────────────
+  if (capturas?.length > 0) {
+    const logHeaders = ['Hora', 'Producto', 'SKU', 'Cantidad', 'Operador']
+    const logRows = capturas.map(c => [
+      formatDate12h(c.created_at ? new Date(c.created_at).getTime() : null),
+      c.nombre,
+      c.sku || '—',
+      c.cantidad,
+      c.operador,
+    ])
+    const wsLog = XLSX.utils.aoa_to_sheet([logHeaders, ...logRows])
+    wsLog['!cols'] = [{ wch: 20 }, { wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 16 }]
+    XLSX.utils.book_append_sheet(wb, wsLog, 'Log Capturas')
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+  XLSX.writeFile(wb, `megacup-comparativa-${assignment.naveName || 'nave'}-${today}.xlsx`)
+}
