@@ -5,10 +5,32 @@ import './index.css'
 
 const APP_VERSION = '1.1.5'
 
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(error) { return { error } }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 24, fontFamily: 'sans-serif', background: '#0d1b3e', color: '#fff', minHeight: '100vh' }}>
+          <h2 style={{ color: '#ec4899' }}>Error de aplicación</h2>
+          <pre style={{ fontSize: 12, color: '#8fa3b1', whiteSpace: 'pre-wrap' }}>{this.state.error.message}</pre>
+          <button onClick={() => { localStorage.removeItem('app_version'); window.location.reload() }}
+            style={{ marginTop: 16, padding: '10px 20px', background: '#1a3a8f', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+            Limpiar caché y recargar
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 function renderApp() {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </React.StrictMode>
   )
 }
