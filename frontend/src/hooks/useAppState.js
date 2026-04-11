@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ls, uid } from '../utils/storage'
 import { clearTimer, recoverTimer } from './useTimer'
 import {
@@ -429,13 +429,13 @@ export function useAppState() {
   // ── Vistas derivadas ──────────────────────────────────────────────────────
 
   /** Descargas visibles según el rol del usuario. */
-  const visibleAssignments = (() => {
+  const visibleAssignments = useMemo(() => {
     const active = Object.values(assignments).filter(
       (a) => a.status === 'active' || a.status === 'idle'
     )
     if (!session || session.role === 'admin' || session.role === 'almacenista') return active
     return active.filter((a) => a.workers?.includes(session.workerName))
-  })()
+  }, [assignments, session])
 
   return {
     // Estado
