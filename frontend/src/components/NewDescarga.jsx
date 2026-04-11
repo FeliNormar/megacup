@@ -55,16 +55,20 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
   }
 
   const totalPersonal = [...new Set([...descargadores, ...estibadores])]
-  const canSave = naveId && provider && product && totalPersonal.length > 0 && tipoCarga
+  // product puede venir del manifiesto o selección directa
+  const hasProduct = product || manifiesto.length > 0
+  const canSave = naveId && provider && hasProduct && totalPersonal.length > 0 && tipoCarga
 
   const handleSave = () => {
     if (!canSave) return
     const nave = naves.find((n) => n.id === naveId)
+    // Si no hay producto seleccionado directamente, usar el primer item del manifiesto
+    const productName = product || manifiesto[0]?.nombre || ''
     onSave({
       naveId,
       naveName:       nave?.name || naveId,
       provider,
-      product,
+      product:        productName,
       po,
       workers:        totalPersonal,
       descargadores,
