@@ -203,11 +203,34 @@ function WorkerRow({ w, editId, editPwd, setEditId, setEditPwd, onRemove, onSave
 // ── Proveedores ───────────────────────────────────────────────────────────────
 function ProviderEditor({ providers, onChange }) {
   const [newProv, setNewProv] = useState('')
-  const [newProduct, setNewProduct] = useState({})
-  const addProvider = () => { const v = newProv.trim(); if (!v) return; onChange([...providers, { id: uid(), name: v, products: [] }]); setNewProv('') }
+  const [newProd, setNewProd] = useState({}) // { provId: { nombre, sku, tipo } }
+
+  const addProvider = () => {
+    const v = newProv.trim()
+    if (!v) return
+    onChange([...providers, { id: uid(), name: v, products: [] }])
+    setNewProv('')
+  }
   const removeProvider = (id) => onChange(providers.filter((p) => p.id !== id))
-  const addProduct = (provId) => { const v = (newProduct[provId] || '').trim(); if (!v) return; onChange(providers.map((p) => p.id === provId ? { ...p, products: [...p.products, v] } : p)); setNewProduct(prev => ({ ...prev, [provId]: '' })) }
-  const removeProduct = (provId, prod) => onChange(providers.map((p) => p.id === provId ? { ...p, products: p.products.filter((x) => x !== prod) } : p))
+
+  const addProduct = (provId) => {
+    const p = newProd[provId] || {}
+    const nombre = (p.nombre || '').trim()
+    if (!nombre) return
+    const producto = { id: uid(), nombre, sku: (p.sku || '').trim(), tipo: p.tipo || 'Ligero' }
+    onChange(providers.map((pr) => pr.id === provId ? { ...pr, products: [...(pr.products || []), producto] } : pr))
+    setNewProd(prev => ({ ...prev, [provId]: { nombre: '', sku: '', tipo: 'Ligero' } }))
+  }
+
+  const removeProduct = (provId, prodId) =>
+    onChange(providers.map((pr) => pr.id === provId
+      ? { ...pr, products: pr.products.filter((x) => (x.id || x) !== prodId) }
+      : pr))
+
+  // Normaliza producto — puede ser string (legacy) u objeto nuevo
+  const normProd = (p) => typeof p === 'string' ? { id: p, nombre: p, sku: '', tipo: 'Ligero' } : p
+
+  const tipoBadge = { Ligero: 'bg-green-100 text-green-700', 'Semi-Pesado': 'bg-yellow-100 text-yellow-700', Pesado: 'bg-red-100 text-red-700' }
 
   return (
     <div className="space-y-3">
@@ -217,28 +240,59 @@ function ProviderEditor({ providers, onChange }) {
           className="flex-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-indigo-400" />
         <button onClick={addProvider} className="px-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"><Plus size={16} /></button>
       </div>
-      {providers.map((prov) => (
-        <div key={prov.id} className="rounded-xl border border-slate-200 dark:border-slate-600 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-sm text-slate-800 dark:text-white">{prov.name}</span>
-            <button onClick={() => removeProvider(prov.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+
+      {providers.map((prov) => {
+        const np = newProd[prov.id] || { nombre: '', sku: '', tipo: 'Ligero' }
+        return (
+          <div key={prov.id} className="rounded-xl border border-slate-200 dark:border-slate-600 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-sm text-slate-800 dark:text-white">{prov.name}</span>
+              <button onClick={() => removeProvider(prov.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+            </div>
+
+            {/* Lista de productos */}
+            <div className="space-y-1">
+              {(prov.products || []).map((pr) => {
+                const p = normProd(pr)
+                return (
+                  <div key={p.id} className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 rounded-lg px-2 py-1.5">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-white truncate">{p.nombre}</span>
+                      {p.sku && <span className="text-[10px] text-slate-400 font-mono shrink-0">{p.sku}</span>}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${tipoBadge[p.tipo] || tipoBadge.Ligero}`}>{p.tipo}</span>
+                    </div>
+                    <button onClick={() => removeProduct(prov.id, p.id)} className="text-red-400 ml-2 shrink-0"><Trash2 size={11} /></button>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Agregar producto con SKU y tipo */}
+            <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 p-2 space-y-2">
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Nuevo producto</p>
+              <div className="flex gap-2">
+                <input value={np.nombre} onChange={(e) => setNewProd(prev => ({ ...prev, [prov.id]: { ...np, nombre: e.target.value } }))}
+                  placeholder="Nombre del producto" onKeyDown={(e) => e.key === 'Enter' && addProduct(prov.id)}
+                  className="flex-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-xs outline-none focus:border-indigo-400" />
+                <input value={np.sku} onChange={(e) => setNewProd(prev => ({ ...prev, [prov.id]: { ...np, sku: e.target.value } }))}
+                  placeholder="SKU" className="w-20 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-xs outline-none focus:border-indigo-400" />
+              </div>
+              <div className="flex gap-2 items-center">
+                <select value={np.tipo} onChange={(e) => setNewProd(prev => ({ ...prev, [prov.id]: { ...np, tipo: e.target.value } }))}
+                  className="flex-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-xs outline-none focus:border-indigo-400">
+                  <option value="Ligero">Ligero</option>
+                  <option value="Semi-Pesado">Semi-Pesado</option>
+                  <option value="Pesado">Pesado</option>
+                </select>
+                <button onClick={() => addProduct(prov.id)}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors">
+                  + Agregar
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1">
-            {prov.products.map((pr) => (
-              <span key={pr} className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs px-2 py-0.5 rounded-full">
-                {pr}
-                <button onClick={() => removeProduct(prov.id, pr)} className="text-red-400 ml-0.5"><Trash2 size={9} /></button>
-              </span>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input value={newProduct[prov.id] || ''} onChange={(e) => setNewProduct(prev => ({ ...prev, [prov.id]: e.target.value }))}
-              onKeyDown={(e) => e.key === 'Enter' && addProduct(prov.id)} placeholder="Agregar producto..."
-              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-2 py-1.5 text-xs outline-none focus:border-indigo-400" />
-            <button onClick={() => addProduct(prov.id)} className="px-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs font-bold">+ Producto</button>
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
