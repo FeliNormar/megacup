@@ -122,6 +122,7 @@ export default function App() {
               onDelete={softDeleteAssignment}
               onEdit={editAssignment}
               online={online}
+              session={session}
             />
           )}
 
@@ -245,7 +246,7 @@ function AppHeader({ dark, onToggleDark, onLogout, roleLabel, online }) {
   )
 }
 
-function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers, visibleAssignments, onNewDescarga, onFinish, onIncident, onDelete, onEdit, online }) {
+function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers, visibleAssignments, onNewDescarga, onFinish, onIncident, onDelete, onEdit, online, session }) {
   return (
     <div className="space-y-4">
       {isAdmin && (
