@@ -276,6 +276,7 @@ function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers
               providers={providers}
               workers={workers}
               naves={naves}
+              session={session}
               onFinish={(cajasReales) => onFinish(a.naveId, cajasReales)}
               onIncident={(fotoUrl) => onIncident(a.naveId, fotoUrl)}
               onDelete={() => onDelete(a.naveId)}

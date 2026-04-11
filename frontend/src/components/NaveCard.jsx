@@ -3,6 +3,7 @@ import { CheckCircle, AlertTriangle, Clock, Package, Truck, Users, Trash2, Penci
 import { useTimer } from '../hooks/useTimer'
 import { fmtElapsed } from '../utils/time'
 import { supabase } from '../utils/supabase'
+import CapturaPanel from './CapturaPanel'
 
 // Colores del cronómetro según tiempo transcurrido vs promedio estimado
 function timerColor(elapsed, cajasEstimadas) {
@@ -46,7 +47,7 @@ function ProgressBar({ cajasEstimadas, cajasReales }) {
   )
 }
 
-export default function NaveCard({ nave, assignment, isWorker, isAdmin, providers, workers, naves, onFinish, onIncident, onDelete, onEdit }) {
+export default function NaveCard({ nave, assignment, isWorker, isAdmin, providers, workers, naves, onFinish, onIncident, onDelete, onEdit, session }) {
   const [confirmAction,  setConfirmAction]  = useState(null)
   const [showEdit,       setShowEdit]       = useState(false)
   const [showDelConfirm, setShowDelConfirm] = useState(false)
@@ -117,6 +118,16 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
           <WhatsAppButtons assignment={assignment} workers={workers} />
         )}
       </div>
+
+      {/* Captura en tiempo real — operadores y admin */}
+      {assignment.id && (
+        <div className="px-4 pb-3 border-t border-[#8fa3b1]/10 pt-3">
+          <CapturaPanel
+            assignment={assignment}
+            workerName={session?.workerName || session?.role || 'admin'}
+          />
+        </div>
+      )}
 
       {/* Botones acción */}
       {!isWorker && (
