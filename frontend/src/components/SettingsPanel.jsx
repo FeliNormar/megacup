@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus, Trash2, Save, ChevronDown, Package, Users, Warehouse, Lock, Eye, EyeOff, RefreshCw, ClipboardList, ShieldCheck } from 'lucide-react'
 
 function uid() { return `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` }
@@ -574,21 +574,31 @@ function PuntosEditor({ configPuntos, onUpdate }) {
   const DEFAULT = { ligero: 1.0, semi_pesado: 2.5, pesado: 4.0 }
   const cfg = configPuntos || DEFAULT
   const [vals, setVals] = useState({
-    Ligero:       String(cfg.ligero),
+    Ligero:        String(cfg.ligero),
     'Semi pesado': String(cfg.semi_pesado),
-    Pesado:       String(cfg.pesado),
+    Pesado:        String(cfg.pesado),
   })
   const [saved, setSaved] = useState(null)
+
+  // Sincronizar cuando configPuntos llega desde Supabase después del primer render
+  useEffect(() => {
+    if (!configPuntos) return
+    setVals({
+      Ligero:        String(configPuntos.ligero),
+      'Semi pesado': String(configPuntos.semi_pesado),
+      Pesado:        String(configPuntos.pesado),
+    })
+  }, [configPuntos?.ligero, configPuntos?.semi_pesado, configPuntos?.pesado])
 
   const handleSave = async (tipo) => {
     const valor = parseFloat(vals[tipo])
     if (isNaN(valor) || valor <= 0) return
+    console.log('PuntosEditor handleSave', tipo, valor)
     await onUpdate?.(tipo, valor)
     setSaved(tipo)
     setTimeout(() => setSaved(null), 2000)
   }
 
-  const tipoKey = { 'Ligero': 'ligero', 'Semi pesado': 'semi_pesado', 'Pesado': 'pesado' }
   const colores = { 'Ligero': 'text-blue-600', 'Semi pesado': 'text-amber-600', 'Pesado': 'text-red-600' }
 
   return (
