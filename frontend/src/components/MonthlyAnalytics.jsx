@@ -37,14 +37,16 @@ export default function MonthlyAnalytics({ records = [], dark }) {
       inMonth.forEach((r) => {
         const allWorkers = [...new Set([...(r.descargadores ?? []), ...(r.estibadores ?? []), ...(r.workers ?? [])])]
         allWorkers.forEach((name) => {
-          if (!workerMap[name]) workerMap[name] = { name, puntos: 0, cajas: 0, descargas: 0, minutos: 0 }
+          const normalizedName = name.trim().toLowerCase()
+          const existingKey = Object.keys(workerMap).find((k) => k.toLowerCase() === normalizedName) ?? name.trim()
+          if (!workerMap[existingKey]) workerMap[existingKey] = { name: name.trim(), puntos: 0, cajas: 0, descargas: 0, minutos: 0 }
           const cajas   = getCajasWorker(r, name)
           const factor  = PESO_FACTORES[r.tipo_carga || r.tipoCarga] ?? 1.0
           const minutos = (r.endTime - r.startTime) / 60000
-          workerMap[name].puntos    += cajas * factor
-          workerMap[name].cajas     += cajas
-          workerMap[name].descargas += 1
-          workerMap[name].minutos   += minutos
+          workerMap[existingKey].puntos    += cajas * factor
+          workerMap[existingKey].cajas     += cajas
+          workerMap[existingKey].descargas += 1
+          workerMap[existingKey].minutos   += minutos
         })
       })
       const rankingMes = Object.values(workerMap)

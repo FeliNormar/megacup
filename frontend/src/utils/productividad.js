@@ -23,19 +23,10 @@ export function getCajasWorker(record, workerName) {
   // support both snake_case (new) and camelCase (old historical records)
   // fallback to cajas_estimadas for records that never had cajas_reales assigned
   const cajasReales = record.cajas_reales ?? record.cajasReales ?? record.cajas_estimadas ?? record.cajasEstimadas ?? 0
-
-  console.log('getCajasWorker', {
-    workerName,
-    cajasReales,
-    'record.cajas_reales':  record.cajas_reales,
-    'record.cajasReales':   record.cajasReales,
-    descargadores,
-    workers: record.workers,
-    esDesc:  descargadores.includes(workerName),
-    esEstib: estibadores.includes(workerName),
-  })
-  const esDesc  = descargadores.includes(workerName)
-  const esEstib = estibadores.includes(workerName)
+  // case-insensitive comparison to handle "Celso Jose" vs "Celso jose"
+  const nameLower = workerName.toLowerCase()
+  const esDesc  = descargadores.some((d) => d.toLowerCase() === nameLower)
+  const esEstib = estibadores.some((e)   => e.toLowerCase() === nameLower)
   if (esDesc && descargadores.length > 0)
     return cajasReales / descargadores.length
   if (esEstib && estibadores.length > 0)
@@ -109,9 +100,10 @@ export function calcProductividadEnVivo(assignment) {
  * Retorna: { puntosTotales, minutosTotales, ptsPorMin, cajasTotales, descargas }
  */
 export function calcResumenWorker(records, workerName, assignments = []) {
+  const nameLower = workerName.toLowerCase()
   const myRecords = records.filter(
     (r) => (r.endTime ?? r.end_time) && (r.startTime ?? r.start_time) && r.status === 'finished'
-    && r.workers?.includes(workerName)
+    && r.workers?.some((w) => w.toLowerCase() === nameLower)
   )
 
   let puntosTotales = 0
@@ -170,7 +162,13 @@ export function calcRankingDia(records, assignments = []) {
   const desdeActivos = assignments
     .filter((a) => a.status === 'active' && a.startTime >= hoyTs)
     .flatMap((a) => a.workers || [])
-  const operadores = [...new Set([...hoy.flatMap((r) => r.workers || []), ...desdeActivos])]
+  // Deduplicate case-insensitively — keep first-seen casing
+  const seen = new Map()
+  ;[...hoy.flatMap((r) => r.workers || []), ...desdeActivos].forEach((name) => {
+    const key = name.toLowerCase()
+    if (!seen.has(key)) seen.set(key, name)
+  })
+  const operadores = [...seen.values()]
 
   const ranking = operadores.map((name) => {
     const res = calcResumenWorker(hoy, name, assignments)
