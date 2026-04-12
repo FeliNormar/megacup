@@ -20,7 +20,8 @@ export const PESO_FACTORES = {
 export function getCajasWorker(record, workerName) {
   const descargadores = record.descargadores ?? record.workers ?? []
   const estibadores   = record.estibadores   ?? []
-  const cajasReales   = record.cajas_reales  ?? 0
+  // support both snake_case (new) and camelCase (old historical records)
+  const cajasReales   = record.cajas_reales  ?? record.cajasReales ?? 0
   const esDesc  = descargadores.includes(workerName)
   const esEstib = estibadores.includes(workerName)
   if (esDesc && descargadores.length > 0)
@@ -37,7 +38,7 @@ export function getCajasWorker(record, workerName) {
  * puntos = cajas × factor_peso
  */
 export function calcPuntosRecord(record, workerName) {
-  const tipoCarga = record.tipoCarga || record.tipo_carga || 'Ligero'
+  const tipoCarga = record.tipo_carga ?? record.tipoCarga ?? 'Ligero'
   const factor    = PESO_FACTORES[tipoCarga] ?? 1.0
   const cajas     = getCajasWorker(record, workerName)
   return cajas * factor
@@ -47,8 +48,10 @@ export function calcPuntosRecord(record, workerName) {
  * Calcula la duración en minutos de un registro.
  */
 export function getDuracionMin(record) {
-  if (!record.startTime || !record.endTime) return 0
-  return (record.endTime - record.startTime) / 60000
+  const start = record.startTime ?? record.start_time
+  const end   = record.endTime   ?? record.end_time
+  if (!start || !end) return 0
+  return (end - start) / 60000
 }
 
 /**
@@ -71,7 +74,7 @@ export function calcProductividadEnVivo(assignment) {
   const cajasXHoraTotal     = (cajas / minutos) * 60
   const cajasXHoraXPersona  = cajasXHoraTotal / totalPersonas
   const puntosXHoraXPersona = cajasXHoraXPersona * factor
-  const cajasEstimadas      = assignment.cajas_estimadas ?? 0
+  const cajasEstimadas = assignment.cajas_estimadas ?? assignment.cajasEstimadas ?? 0
   const minutosEstimados    = cajas > 0 && cajasEstimadas > 0
     ? (cajasEstimadas / cajas) * minutos
     : null
@@ -95,7 +98,8 @@ export function calcProductividadEnVivo(assignment) {
  */
 export function calcResumenWorker(records, workerName, assignments = []) {
   const myRecords = records.filter(
-    (r) => r.workers?.includes(workerName) && r.endTime && r.startTime && r.status === 'finished'
+    (r) => (r.endTime ?? r.end_time) && (r.startTime ?? r.start_time) && r.status === 'finished'
+    && r.workers?.includes(workerName)
   )
 
   let puntosTotales = 0
@@ -138,7 +142,7 @@ export function calcResumenWorker(records, workerName, assignments = []) {
 export function recordsDeHoy(records) {
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
-  return records.filter((r) => r.startTime >= hoy.getTime())
+  return records.filter((r) => (r.startTime ?? r.start_time) >= hoy.getTime())
 }
 
 /**
