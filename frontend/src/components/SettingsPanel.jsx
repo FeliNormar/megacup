@@ -571,54 +571,54 @@ function CategoriasEditor({ categorias = [], onAdd }) {
 
 // ── Editor de puntos por tipo de carga ───────────────────────────────────────
 function PuntosEditor({ configPuntos, onUpdate }) {
-  const DEFAULT = { ligero: 1.0, semi_pesado: 2.5, pesado: 4.0 }
-  const cfg = configPuntos || DEFAULT
   const [vals, setVals] = useState({
-    Ligero:        String(cfg.ligero),
-    'Semi pesado': String(cfg.semi_pesado),
-    Pesado:        String(cfg.pesado),
+    ligero:      configPuntos?.ligero      ?? 1.0,
+    semi_pesado: configPuntos?.semi_pesado ?? 2.5,
+    pesado:      configPuntos?.pesado      ?? 4.0,
   })
-  const [saved, setSaved] = useState(null)
 
-  // Sincronizar cuando configPuntos llega desde Supabase después del primer render
   useEffect(() => {
-    if (!configPuntos) return
-    setVals({
-      Ligero:        String(configPuntos.ligero),
-      'Semi pesado': String(configPuntos.semi_pesado),
-      Pesado:        String(configPuntos.pesado),
+    if (configPuntos) setVals({
+      ligero:      configPuntos.ligero,
+      semi_pesado: configPuntos.semi_pesado,
+      pesado:      configPuntos.pesado,
     })
   }, [configPuntos?.ligero, configPuntos?.semi_pesado, configPuntos?.pesado])
 
-  const handleSave = async (tipo) => {
-    const valor = parseFloat(vals[tipo])
-    if (isNaN(valor) || valor <= 0) return
-    console.log('PuntosEditor handleSave', tipo, valor)
-    await onUpdate?.(tipo, valor)
-    setSaved(tipo)
-    setTimeout(() => setSaved(null), 2000)
-  }
+  // key es snake_case (ligero/semi_pesado/pesado)
+  // updatePuntosXCaja espera el label en español (Ligero/Semi pesado/Pesado)
+  const keyToLabel = { ligero: 'Ligero', semi_pesado: 'Semi pesado', pesado: 'Pesado' }
 
-  const colores = { 'Ligero': 'text-blue-600', 'Semi pesado': 'text-amber-600', 'Pesado': 'text-red-600' }
+  const handleSave = async (key, valor) => {
+    const num = parseFloat(valor)
+    if (isNaN(num) || num <= 0) return
+    const tipo = keyToLabel[key]
+    console.log('SAVING', tipo, num, 'onUpdate:', typeof onUpdate)
+    if (onUpdate) await onUpdate(tipo, num)
+    else console.error('onUpdate is undefined!')
+  }
 
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-400">
         Define cuántos puntos vale cada caja según su categoría de peso. Afecta todos los rankings y gráficas en tiempo real.
       </p>
-      {['Ligero', 'Semi pesado', 'Pesado'].map((tipo) => (
-        <div key={tipo} className="flex items-center gap-3">
-          <span className={`text-sm font-semibold w-24 shrink-0 ${colores[tipo]}`}>{tipo}</span>
+      {[['ligero', 'Ligero', 'text-blue-600'], ['semi_pesado', 'Semi pesado', 'text-amber-600'], ['pesado', 'Pesado', 'text-red-600']].map(([key, label, color]) => (
+        <div key={key} className="flex items-center gap-3">
+          <span className={`text-sm font-semibold w-24 shrink-0 ${color}`}>{label}</span>
           <input
             type="number" min="0.1" step="0.1"
-            value={vals[tipo]}
-            onChange={(e) => setVals((p) => ({ ...p, [tipo]: e.target.value }))}
-            onKeyDown={(e) => e.key === 'Enter' && handleSave(tipo)}
-            onBlur={() => handleSave(tipo)}
+            value={vals[key]}
+            onChange={(e) => setVals((v) => ({ ...v, [key]: e.target.value }))}
             className="w-24 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-indigo-400 text-center font-bold"
           />
+          <button
+            onClick={() => handleSave(key, vals[key])}
+            className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors"
+          >
+            Guardar
+          </button>
           <span className="text-xs text-slate-400">pts/caja</span>
-          {saved === tipo && <span className="text-xs text-green-500 font-semibold">✅ Guardado</span>}
         </div>
       ))}
     </div>
