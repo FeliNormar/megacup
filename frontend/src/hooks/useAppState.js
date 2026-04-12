@@ -272,8 +272,7 @@ export function useAppState() {
   const [trailersCierre, setTrailersCierre] = useState(() => ls.get('mc_trailers_cierre', []))
   useEffect(() => { ls.set('mc_trailers_cierre', trailersCierre) }, [trailersCierre])
 
-  const addCategoria = async (nombre) => {
-    const trimmed = nombre.trim()
+  const addCategoria = async (nombre) => {    const trimmed = nombre.trim()
     if (!trimmed) return
     const nueva = { id: `cat-${Date.now()}`, nombre: trimmed }
     setCategorias((prev) => [...prev, nueva].sort((a, b) => a.nombre.localeCompare(b.nombre)))
@@ -283,6 +282,17 @@ export function useAppState() {
     } catch (err) {
       console.warn('Error guardando categoría:', err.message)
     }
+  }
+
+  const updateCajasAsignadas = async (assignmentId, cajasAsignadas) => {
+    // Actualizar estado local inmediatamente
+    setAssignments((prev) => {
+      const next = { ...prev }
+      const key = Object.keys(next).find((k) => next[k].id === assignmentId)
+      if (key) next[key] = { ...next[key], cajas_asignadas: cajasAsignadas }
+      return next
+    })
+    await supabase.from('assignments').update({ cajas_asignadas: cajasAsignadas }).eq('id', assignmentId)
   }
 
   const importRecord = async (data) => {
@@ -359,18 +369,21 @@ export function useAppState() {
     const a = assignments[naveId]
     if (!a) return
 
+    // Usar cajas_asignadas como base si no se ingresaron cajas reales manualmente
+    const cajasFinales = cajasReales ?? a.cajas_asignadas ?? null
+
     const descargadores = a.descargadores || []
     const estibadores   = a.estibadores   || []
-    const cajasXDescarg = cajasReales && descargadores.length > 0
-      ? cajasReales / descargadores.length : null
-    const cajasXEstib   = cajasReales && estibadores.length > 0
-      ? cajasReales / estibadores.length : null
+    const cajasXDescarg = cajasFinales && descargadores.length > 0
+      ? cajasFinales / descargadores.length : null
+    const cajasXEstib   = cajasFinales && estibadores.length > 0
+      ? cajasFinales / estibadores.length : null
 
     const record = {
       ...a,
       endTime: Date.now(),
       status:  'finished',
-      cajasReales:       cajasReales       || null,
+      cajasReales:       cajasFinales      || null,
       cajasXDescargador: cajasXDescarg     || null,
       cajasXEstibador:   cajasXEstib       || null,
     }
@@ -395,14 +408,14 @@ export function useAppState() {
       status:              'finished',
       tipo_carga:          record.tipoCarga || record.tipo_carga || null,
       cajas_estimadas:     record.cajasEstimadas || record.cajas_estimadas || null,
-      cajas_reales:        cajasReales || null,
+      cajas_reales:        cajasFinales || null,
       cajas_x_descargador: cajasXDescarg || null,
       cajas_x_estibador:   cajasXEstib || null,
       categoria:           record.categoria || null,
     }
     const { error } = await supabase.from('records').insert([row])
     if (error) { console.error('Error guardando record:', error); toast('❌ Error al finalizar la descarga. Intenta de nuevo.') }
-    insertLog(a.id, session?.workerName || 'admin', 'finalizada', cajasReales ? `${cajasReales} cajas` : '')
+    insertLog(a.id, session?.workerName || 'admin', 'finalizada', cajasFinales ? `${cajasFinales} cajas` : '')
   }
 
   const reportIncident = async (naveId, fotoUrl = null) => {
@@ -560,6 +573,7 @@ export function useAppState() {
     trailersCierre,
     categorias,
     addCategoria,
+    updateCajasAsignadas,
     frase, setFrase,
 
     // Derivados

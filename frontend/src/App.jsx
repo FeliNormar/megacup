@@ -55,6 +55,7 @@ export default function App() {
     trailersCierre,
     categorias,
     addCategoria,
+    updateCajasAsignadas,
     frase, setFrase,
   } = useAppState()
 
@@ -124,6 +125,7 @@ export default function App() {
               onIncident={reportIncident}
               onDelete={softDeleteAssignment}
               onEdit={editAssignment}
+              onUpdateCajasAsignadas={updateCajasAsignadas}
               online={online}
               session={session}
             />
@@ -256,7 +258,7 @@ function AppHeader({ dark, onToggleDark, onLogout, roleLabel, online }) {
   )
 }
 
-function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers, visibleAssignments, onNewDescarga, onFinish, onIncident, onDelete, onEdit, online, session }) {
+function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers, visibleAssignments, onNewDescarga, onFinish, onIncident, onDelete, onEdit, onUpdateCajasAsignadas, online, session }) {
   return (
     <div className="space-y-4">
       {isAdmin && (
@@ -292,6 +294,7 @@ function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers
               onIncident={(fotoUrl) => onIncident(a.naveId, fotoUrl)}
               onDelete={() => onDelete(a.naveId)}
               onEdit={(changes) => onEdit(a.naveId, changes)}
+              onUpdateCajasAsignadas={onUpdateCajasAsignadas}
             />
           )
         })}

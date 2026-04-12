@@ -30,25 +30,72 @@ function WorkerAvatars({ names = [] }) {
   )
 }
 
-// Barra de progreso de cajas
-function ProgressBar({ cajasEstimadas, cajasReales }) {
-  if (!cajasEstimadas) return null
-  const pct = cajasReales ? Math.min(100, Math.round((cajasReales / cajasEstimadas) * 100)) : 0
-  const color = pct >= 100 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-400' : 'bg-indigo-500'
+// Barra de progreso de cajas asignadas vs estimadas en tiempo real
+function ProgressBar({ cajasEstimadas, cajasAsignadas, isAdmin, onUpdateCajas }) {
+  const [inputVal, setInputVal] = useState(cajasAsignadas ?? '')
+
+  // Sincronizar si cambia desde fuera (realtime)
+  useEffect(() => { setInputVal(cajasAsignadas ?? '') }, [cajasAsignadas])
+
+  if (!cajasEstimadas) {
+    if (!isAdmin) return null
+    return (
+      <div className="mt-2">
+        <p className="text-xs text-[#8fa3b1] mb-1">Sin estimado de cajas</p>
+        {isAdmin && (
+          <input
+            type="number" min="0"
+            value={inputVal}
+            onChange={(e) => {
+              setInputVal(e.target.value)
+              const n = parseInt(e.target.value)
+              if (!isNaN(n) && n >= 0) onUpdateCajas(n)
+            }}
+            placeholder="Cajas asignadas"
+            className="w-full rounded-xl border border-[#8fa3b1]/30 bg-transparent px-3 py-1.5 text-xs outline-none focus:border-[#1a3a8f]"
+          />
+        )}
+      </div>
+    )
+  }
+
+  const asignadas = cajasAsignadas ?? 0
+  const pct       = Math.min(100, Math.round((asignadas / cajasEstimadas) * 100))
+  const pendientes = Math.max(0, cajasEstimadas - asignadas)
+  const color     = pct >= 100 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-400' : 'bg-indigo-500'
+
   return (
-    <div className="mt-2">
-      <div className="flex justify-between text-xs text-[#8fa3b1] mb-1">
-        <span>Progreso cajas</span>
-        <span className="font-semibold">{cajasReales || 0} / {cajasEstimadas} ({pct}%)</span>
+    <div className="mt-2 space-y-1.5">
+      <div className="flex justify-between text-xs text-[#8fa3b1]">
+        <span>Asignadas / Estimadas</span>
+        <span className="font-semibold">{asignadas} / {cajasEstimadas} ({pct}%)</span>
       </div>
       <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
         <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-[#8fa3b1]">
+          Pendientes: <span className="font-bold text-slate-700 dark:text-white">{pendientes}</span>
+        </span>
+        {isAdmin && (
+          <input
+            type="number" min="0" max={cajasEstimadas}
+            value={inputVal}
+            onChange={(e) => {
+              setInputVal(e.target.value)
+              const n = parseInt(e.target.value)
+              if (!isNaN(n) && n >= 0) onUpdateCajas(n)
+            }}
+            placeholder="Actualizar"
+            className="w-28 rounded-xl border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs text-right outline-none focus:border-[#1a3a8f]"
+          />
+        )}
       </div>
     </div>
   )
 }
 
-export default function NaveCard({ nave, assignment, isWorker, isAdmin, providers, workers, naves, onFinish, onIncident, onDelete, onEdit, session }) {
+export default function NaveCard({ nave, assignment, isWorker, isAdmin, providers, workers, naves, onFinish, onIncident, onDelete, onEdit, onUpdateCajasAsignadas, session }) {
   const [confirmAction,  setConfirmAction]  = useState(null)
   const [showEdit,       setShowEdit]       = useState(false)
   const [showDelConfirm, setShowDelConfirm] = useState(false)
@@ -112,7 +159,12 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
         )}
 
         {/* Barra de progreso */}
-        <ProgressBar cajasEstimadas={assignment.cajasEstimadas} cajasReales={null} />
+        <ProgressBar
+          cajasEstimadas={assignment.cajasEstimadas || assignment.cajas_estimadas}
+          cajasAsignadas={assignment.cajas_asignadas}
+          isAdmin={isAdmin}
+          onUpdateCajas={(n) => onUpdateCajasAsignadas?.(assignment.id, n)}
+        />
 
         {/* WhatsApp — solo admin */}
         {isAdmin && assignment.workers?.length > 0 && (
