@@ -20,20 +20,12 @@ export const PESO_FACTORES = {
 export function getCajasWorker(record, workerName) {
   const descargadores = record.descargadores ?? record.workers ?? []
   const estibadores   = record.estibadores   ?? []
-  // support both snake_case (new) and camelCase (old historical records)
-  // fallback to cajas_estimadas for records that never had cajas_reales assigned
-  const cajasReales = record.cajas_reales ?? record.cajasReales ?? record.cajas_estimadas ?? record.cajasEstimadas ?? 0
-  // case-insensitive comparison to handle "Celso Jose" vs "Celso jose"
-  const nameLower = workerName.toLowerCase()
-  const esDesc  = descargadores.some((d) => d.toLowerCase() === nameLower)
-  const esEstib = estibadores.some((e)   => e.toLowerCase() === nameLower)
-  if (esDesc && descargadores.length > 0)
-    return cajasReales / descargadores.length
-  if (esEstib && estibadores.length > 0)
-    return cajasReales / estibadores.length
-  if (cajasReales > 0 && record.workers?.length > 0)
-    return cajasReales / record.workers.length
-  return 0
+  const cajasReales   = record.cajas_reales ?? record.cajasReales ?? record.cajas_estimadas ?? record.cajasEstimadas ?? 0
+  // combine both roles into one pool and divide equally
+  const todosLosWorkers = [...new Set([...descargadores, ...estibadores])]
+  const esMiembro = todosLosWorkers.some((w) => w.toLowerCase().trim() === workerName.toLowerCase().trim())
+  if (!esMiembro || todosLosWorkers.length === 0) return 0
+  return cajasReales / todosLosWorkers.length
 }
 
 /**

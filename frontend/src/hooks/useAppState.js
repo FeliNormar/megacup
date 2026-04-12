@@ -374,10 +374,11 @@ export function useAppState() {
 
     const descargadores = a.descargadores || []
     const estibadores   = a.estibadores   || []
-    const cajasXDescarg = cajasFinales && descargadores.length > 0
-      ? cajasFinales / descargadores.length : null
-    const cajasXEstib   = cajasFinales && estibadores.length > 0
-      ? cajasFinales / estibadores.length : null
+    const todosLosWorkers = [...new Set([...descargadores, ...estibadores])]
+    const cajasXDescarg = cajasFinales && todosLosWorkers.length > 0
+      ? cajasFinales / todosLosWorkers.length : null
+    const cajasXEstib   = cajasFinales && todosLosWorkers.length > 0
+      ? cajasFinales / todosLosWorkers.length : null
 
     const record = {
       ...a,
@@ -494,13 +495,16 @@ export function useAppState() {
     const estibadores   = changes.estibadores    ?? existing.estibadores    ?? []
 
     if (cajasReales) {
-      if (descargadores.length > 0 && !changes.cajasXDescargador && !changes.cajas_x_descargador) {
-        changes.cajasXDescargador    = cajasReales / descargadores.length
-        changes.cajas_x_descargador  = changes.cajasXDescargador
-      }
-      if (estibadores.length > 0 && !changes.cajasXEstibador && !changes.cajas_x_estibador) {
-        changes.cajasXEstibador   = cajasReales / estibadores.length
-        changes.cajas_x_estibador = changes.cajasXEstibador
+      const todosLosWorkers = [...new Set([...descargadores, ...estibadores])]
+      if (todosLosWorkers.length > 0) {
+        if (!changes.cajasXDescargador && !changes.cajas_x_descargador) {
+          changes.cajasXDescargador   = cajasReales / todosLosWorkers.length
+          changes.cajas_x_descargador = changes.cajasXDescargador
+        }
+        if (!changes.cajasXEstibador && !changes.cajas_x_estibador) {
+          changes.cajasXEstibador   = cajasReales / todosLosWorkers.length
+          changes.cajas_x_estibador = changes.cajasXEstibador
+        }
       }
     }
     // ─────────────────────────────────────────────────────────────────────
