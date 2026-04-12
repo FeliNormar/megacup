@@ -262,15 +262,17 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
           {r.estibadores?.length > 0 && (
             <span className="text-xs text-[#8fa3b1]">🏗️ {r.estibadores.join(', ')}</span>
           )}
-          {/* Badge de productividad — calculado en tiempo real */}
+          {/* Badge de productividad — puntos por persona */}
           {r.status === 'finished' && (r.cajasReales || r.cajas_reales) && r.workers?.length > 0 && (() => {
-            const tipoCarga = r.tipoCarga || r.tipo_carga
-            const factor    = PESO_FACTORES[tipoCarga] ?? null
-            const allPts    = r.workers.reduce((acc, w) => acc + calcPuntosRecord(r, w), 0)
-            if (allPts === 0) return null
+            const tipoCarga   = r.tipoCarga || r.tipo_carga
+            const factor      = PESO_FACTORES[tipoCarga] ?? null
+            const cajasReales = r.cajasReales || r.cajas_reales || 0
+            const numDesc     = r.descargadores?.length || r.workers?.length || 1
+            const ptsPorPersona = factor ? Math.round((cajasReales / numDesc) * factor) : 0
+            if (ptsPorPersona === 0) return null
             return (
               <span className="text-xs font-bold text-[#ec4899] bg-pink-50 dark:bg-pink-900/20 px-2 py-0.5 rounded-full">
-                ⚡ {Math.round(allPts)} pts{factor ? ` ×${factor}` : ''}
+                ⚡ {ptsPorPersona} pts/persona{factor ? ` ×${factor}` : ''}
               </span>
             )
           })()}

@@ -21,7 +21,8 @@ export function getCajasWorker(record, workerName) {
   const descargadores = record.descargadores ?? record.workers ?? []
   const estibadores   = record.estibadores   ?? []
   // support both snake_case (new) and camelCase (old historical records)
-  const cajasReales   = record.cajas_reales  ?? record.cajasReales ?? 0
+  // fallback to cajas_estimadas for records that never had cajas_reales assigned
+  const cajasReales = record.cajas_reales ?? record.cajasReales ?? record.cajas_estimadas ?? record.cajasEstimadas ?? 0
   const esDesc  = descargadores.includes(workerName)
   const esEstib = estibadores.includes(workerName)
   if (esDesc && descargadores.length > 0)
