@@ -167,6 +167,7 @@ export default function App() {
               trailersCierre={trailersCierre}
               categorias={categorias}
               assignments={Object.values(assignments)}
+              configPuntos={configPuntos}
             />
           )}
 

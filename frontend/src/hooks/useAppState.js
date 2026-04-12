@@ -282,6 +282,7 @@ export function useAppState() {
   useEffect(() => { ls.set('mc_trailers_cierre', trailersCierre) }, [trailersCierre])
 
   const updatePuntosXCaja = async (tipo, valor) => {
+    console.log('updatePuntosXCaja called', { tipo, valor, configPuntosActual: configPuntos })
     const key = tipo === 'Ligero' ? 'ligero' : tipo === 'Semi pesado' ? 'semi_pesado' : 'pesado'
     const updated = { ...configPuntos, [key]: Number(valor) }
     setConfigPuntos(updated)

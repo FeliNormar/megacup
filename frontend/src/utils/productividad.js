@@ -25,7 +25,9 @@ export function getFactorCarga(tipoCarga, configPuntos) {
       'Semi pesado': configPuntos.semi_pesado ?? 2.5,
       'Pesado':      configPuntos.pesado      ?? 4.0,
     }
-    return map[tipoCarga] ?? 1.0
+    const result = map[tipoCarga] ?? 1.0
+    console.log('getFactorCarga', { tipoCarga, configPuntos, result })
+    return result
   }
   return PESO_FACTORES[tipoCarga] ?? 1.0
 }
