@@ -23,6 +23,17 @@ export function getCajasWorker(record, workerName) {
   // support both snake_case (new) and camelCase (old historical records)
   // fallback to cajas_estimadas for records that never had cajas_reales assigned
   const cajasReales = record.cajas_reales ?? record.cajasReales ?? record.cajas_estimadas ?? record.cajasEstimadas ?? 0
+
+  console.log('getCajasWorker', {
+    workerName,
+    cajasReales,
+    'record.cajas_reales':  record.cajas_reales,
+    'record.cajasReales':   record.cajasReales,
+    descargadores,
+    workers: record.workers,
+    esDesc:  descargadores.includes(workerName),
+    esEstib: estibadores.includes(workerName),
+  })
   const esDesc  = descargadores.includes(workerName)
   const esEstib = estibadores.includes(workerName)
   if (esDesc && descargadores.length > 0)
