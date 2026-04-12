@@ -28,7 +28,7 @@ async function clearCacheAndReload() {
   window.location.reload()
 }
 
-export default function WorkerPanel({ records = [], workerName, trailersCierre = [], assignments = [] }) {
+export default function WorkerPanel({ records = [], workerName, trailersCierre = [], assignments = [], configPuntos }) {
   const [showMetricaDetalle, setShowMetricaDetalle] = useState(false)
 
   // Solo registros donde participó este operador
@@ -66,8 +66,8 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
   const totalHoras     = myRecords.reduce((acc, r) => acc + (r.endTime - r.startTime), 0)
 
   // ── Métricas del día ──────────────────────────────────────────────────────
-  const resumenHoy  = useMemo(() => calcResumenWorker(recordsDeHoy(records), workerName, Object.values(assignments)), [records, workerName, assignments])
-  const rankingHoy  = useMemo(() => calcRankingDia(records, Object.values(assignments)), [records, assignments])
+  const resumenHoy  = useMemo(() => calcResumenWorker(recordsDeHoy(records), workerName, Object.values(assignments), configPuntos), [records, workerName, assignments, configPuntos])
+  const rankingHoy  = useMemo(() => calcRankingDia(records, Object.values(assignments), configPuntos), [records, assignments, configPuntos])
 
   // Puntos extra del trailer de hoy para este operador
   const puntosTrailerHoy = useMemo(() => {

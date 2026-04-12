@@ -6,11 +6,28 @@
  * Productividad = puntos / minutos_trabajados
  */
 
-/** Factor multiplicador por categoría de carga */
+/** Factor multiplicador por categoría de carga.
+ *  Fallback hardcodeado — se sobreescribe con configPuntos de Supabase cuando está disponible. */
 export const PESO_FACTORES = {
   'Ligero':      1.0,
   'Semi pesado': 2.5,
   'Pesado':      4.0,
+}
+
+/**
+ * Obtiene el factor de peso para un tipo de carga.
+ * Usa configPuntos de Supabase si está disponible, si no usa PESO_FACTORES como fallback.
+ */
+export function getFactorCarga(tipoCarga, configPuntos) {
+  if (configPuntos) {
+    const map = {
+      'Ligero':      configPuntos.ligero      ?? 1.0,
+      'Semi pesado': configPuntos.semi_pesado ?? 2.5,
+      'Pesado':      configPuntos.pesado      ?? 4.0,
+    }
+    return map[tipoCarga] ?? 1.0
+  }
+  return PESO_FACTORES[tipoCarga] ?? 1.0
 }
 
 /**
@@ -32,9 +49,9 @@ export function getCajasWorker(record, workerName) {
  * Calcula los puntos de productividad de un registro para un operador.
  * puntos = cajas × factor_peso
  */
-export function calcPuntosRecord(record, workerName) {
+export function calcPuntosRecord(record, workerName, configPuntos) {
   const tipoCarga = record.tipo_carga ?? record.tipoCarga ?? 'Ligero'
-  const factor    = PESO_FACTORES[tipoCarga] ?? 1.0
+  const factor    = getFactorCarga(tipoCarga, configPuntos)
   const cajas     = getCajasWorker(record, workerName)
   return cajas * factor
 }
@@ -53,7 +70,7 @@ export function getDuracionMin(record) {
  * Calcula la productividad en vivo de una descarga activa.
  * Usa cajas_asignadas y el tiempo transcurrido desde startTime.
  */
-export function calcProductividadEnVivo(assignment) {
+export function calcProductividadEnVivo(assignment, configPuntos) {
   const ahora   = Date.now()
   const minutos = (ahora - assignment.startTime) / 60000
   if (minutos <= 0) return null
@@ -64,7 +81,7 @@ export function calcProductividadEnVivo(assignment) {
   const totalPersonas = descargadores.length + estibadores.length
   if (totalPersonas === 0) return null
 
-  const factor = PESO_FACTORES[assignment.tipo_carga] ?? 1.0
+  const factor = getFactorCarga(assignment.tipo_carga, configPuntos)
 
   const cajasXHoraTotal     = (cajas / minutos) * 60
   const cajasXHoraXPersona  = cajasXHoraTotal / totalPersonas
@@ -91,7 +108,7 @@ export function calcProductividadEnVivo(assignment) {
  * Incluye descargas terminadas (records) y activas (assignments) del día.
  * Retorna: { puntosTotales, minutosTotales, ptsPorMin, cajasTotales, descargas }
  */
-export function calcResumenWorker(records, workerName, assignments = []) {
+export function calcResumenWorker(records, workerName, assignments = [], configPuntos) {
   const nameLower = workerName.toLowerCase()
   const myRecords = records.filter(
     (r) => (r.endTime ?? r.end_time) && (r.startTime ?? r.start_time) && r.status === 'finished'
@@ -103,7 +120,7 @@ export function calcResumenWorker(records, workerName, assignments = []) {
   let cajasTotales = 0
 
   myRecords.forEach((r) => {
-    puntosTotales  += calcPuntosRecord(r, workerName)
+    puntosTotales  += calcPuntosRecord(r, workerName, configPuntos)
     minutosTotales += getDuracionMin(r)
     cajasTotales   += getCajasWorker(r, workerName)
   })
@@ -112,9 +129,9 @@ export function calcResumenWorker(records, workerName, assignments = []) {
   assignments
     .filter((a) => a.status === 'active' && a.workers?.includes(workerName) && (a.cajas_asignadas ?? 0) > 0)
     .forEach((a) => {
-      const vivo = calcProductividadEnVivo(a)
+      const vivo = calcProductividadEnVivo(a, configPuntos)
       if (!vivo) return
-      const factor = PESO_FACTORES[a.tipo_carga] ?? 1.0
+      const factor = getFactorCarga(a.tipo_carga, configPuntos)
       const cajasWorker = (a.cajas_asignadas ?? 0) / vivo.totalPersonas
       puntosTotales  += cajasWorker * factor
       minutosTotales += vivo.minutosTranscurridos
@@ -146,15 +163,13 @@ export function recordsDeHoy(records) {
  * Retorna array ordenado de mayor a menor puntos totales:
  * [{ workerName, ptsPorMin, puntosTotales, cajasTotales, minutosTotales, descargas }]
  */
-export function calcRankingDia(records, assignments = []) {
+export function calcRankingDia(records, assignments = [], configPuntos) {
   const hoy = recordsDeHoy(records).filter((r) => r.status === 'finished')
 
-  // Operadores de records terminados + activos del día
   const hoyTs = (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime() })()
   const desdeActivos = assignments
     .filter((a) => a.status === 'active' && a.startTime >= hoyTs)
     .flatMap((a) => a.workers || [])
-  // Deduplicate case-insensitively — keep first-seen casing
   const seen = new Map()
   ;[...hoy.flatMap((r) => r.workers || []), ...desdeActivos].forEach((name) => {
     const key = name.toLowerCase()
@@ -163,7 +178,7 @@ export function calcRankingDia(records, assignments = []) {
   const operadores = [...seen.values()]
 
   const ranking = operadores.map((name) => {
-    const res = calcResumenWorker(hoy, name, assignments)
+    const res = calcResumenWorker(hoy, name, assignments, configPuntos)
     return { workerName: name, ...res }
   })
 

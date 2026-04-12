@@ -66,6 +66,8 @@ export function useAppState() {
   const [recordsTotal, setRecordsTotal] = useState(0)
   const RECORDS_PAGE_SIZE = 50
   const [categorias,   setCategorias]   = useState(() => ls.get('mc_categorias', []))
+  const DEFAULT_CONFIG_PUNTOS = { ligero: 1.0, semi_pesado: 2.5, pesado: 4.0 }
+  const [configPuntos, setConfigPuntos] = useState(() => ls.get('mc_config_puntos', DEFAULT_CONFIG_PUNTOS))
 
   const fetchRecordsPage = async (page = 0) => {
     const from = page * RECORDS_PAGE_SIZE
@@ -148,6 +150,13 @@ export function useAppState() {
         if (catData?.length > 0) {
           setCategorias(catData)
           ls.set('mc_categorias', catData)
+        }
+        // Cargar config de puntos por tipo de carga
+        const { data: puntosData } = await supabase.from('config_puntos').select('*').eq('id', 'singleton').single()
+        if (puntosData) {
+          const cfg = { ligero: puntosData.ligero, semi_pesado: puntosData.semi_pesado, pesado: puntosData.pesado }
+          setConfigPuntos(cfg)
+          ls.set('mc_config_puntos', cfg)
         }
       } catch (err) {
         console.error('Error cargando datos de Supabase:', err)
@@ -271,6 +280,18 @@ export function useAppState() {
   // ── Trailer de cierre del día ─────────────────────────────────────────────
   const [trailersCierre, setTrailersCierre] = useState(() => ls.get('mc_trailers_cierre', []))
   useEffect(() => { ls.set('mc_trailers_cierre', trailersCierre) }, [trailersCierre])
+
+  const updatePuntosXCaja = async (tipo, valor) => {
+    const key = tipo === 'Ligero' ? 'ligero' : tipo === 'Semi pesado' ? 'semi_pesado' : 'pesado'
+    const updated = { ...configPuntos, [key]: Number(valor) }
+    setConfigPuntos(updated)
+    ls.set('mc_config_puntos', updated)
+    try {
+      await supabase.from('config_puntos').update({ [key]: Number(valor), updated_at: new Date().toISOString() }).eq('id', 'singleton')
+    } catch (err) {
+      console.warn('Error guardando config_puntos:', err.message)
+    }
+  }
 
   const addCategoria = async (nombre) => {    const trimmed = nombre.trim()
     if (!trimmed) return
@@ -578,6 +599,8 @@ export function useAppState() {
     trailersCierre,
     categorias,
     addCategoria,
+    configPuntos,
+    updatePuntosXCaja,
     updateCajasAsignadas,
     frase, setFrase,
 

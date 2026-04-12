@@ -68,3 +68,21 @@ from information_schema.tables
 where table_schema = 'public'
   and table_name in ('records', 'assignments', 'trailers_cierre')
 order by table_name;
+
+-- ============================================================
+-- config_puntos — factores de peso configurables por el admin
+-- ============================================================
+CREATE TABLE IF NOT EXISTS config_puntos (
+  id            text PRIMARY KEY DEFAULT 'singleton',
+  ligero        float NOT NULL DEFAULT 1.0,
+  semi_pesado   float NOT NULL DEFAULT 2.5,
+  pesado        float NOT NULL DEFAULT 4.0,
+  updated_at    timestamptz DEFAULT now()
+);
+
+ALTER TABLE config_puntos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow all config_puntos" ON config_puntos FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO config_puntos (id, ligero, semi_pesado, pesado)
+VALUES ('singleton', 1.0, 2.5, 4.0)
+ON CONFLICT (id) DO NOTHING;

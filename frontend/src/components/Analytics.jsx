@@ -6,7 +6,7 @@ import HistorialFilters       from './HistorialFilters'
 import ProductividadAnalytics from './ProductividadAnalytics'
 import InformeProductividad   from './InformeProductividad'
 
-export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab, recordsPage, recordsTotal, recordsPageSize, fetchRecordsPage, trailersCierre = [], categorias = [], assignments = [] }) {
+export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab, recordsPage, recordsTotal, recordsPageSize, fetchRecordsPage, trailersCierre = [], categorias = [], assignments = [], configPuntos }) {
   const [view, setView] = useState(defaultTab === 'history' ? 'history' : 'weekly')
   const [showInforme, setShowInforme] = useState(false)
   const printRef = useRef(null)
@@ -72,12 +72,12 @@ export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, 
       <div ref={printRef}>
         {view === 'weekly' && (
           <>
-            <WeeklyAnalytics records={records} dark={dark} />
+            <WeeklyAnalytics records={records} dark={dark} configPuntos={configPuntos} />
           </>
         )}
 
         {view === 'monthly' && (
-          <MonthlyAnalytics records={records} dark={dark} />
+          <MonthlyAnalytics records={records} dark={dark} configPuntos={configPuntos} />
         )}
       </div>
 
@@ -88,6 +88,7 @@ export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, 
           dark={dark}
           workers={workers}
           assignments={assignments}
+          configPuntos={configPuntos}
         />
       )}
 

@@ -55,6 +55,8 @@ export default function App() {
     trailersCierre,
     categorias,
     addCategoria,
+    configPuntos,
+    updatePuntosXCaja,
     updateCajasAsignadas,
     frase, setFrase,
   } = useAppState()
@@ -126,6 +128,7 @@ export default function App() {
               onDelete={softDeleteAssignment}
               onEdit={editAssignment}
               onUpdateCajasAsignadas={updateCajasAsignadas}
+              configPuntos={configPuntos}
               online={online}
               session={session}
             />
@@ -168,7 +171,7 @@ export default function App() {
           )}
 
           {tab === 'history' && isWorker && (
-            <WorkerPanel records={records} workerName={session.workerName} trailersCierre={trailersCierre} assignments={assignments} />
+            <WorkerPanel records={records} workerName={session.workerName} trailersCierre={trailersCierre} assignments={assignments} configPuntos={configPuntos} />
           )}
 
           {tab === 'settings' && isAdmin && (
@@ -184,6 +187,8 @@ export default function App() {
               onImportRecord={importRecord}
               categorias={categorias}
               onAddCategoria={addCategoria}
+              configPuntos={configPuntos}
+              onUpdatePuntosXCaja={updatePuntosXCaja}
             />
           )}
           </PageTransition>
@@ -259,7 +264,7 @@ function AppHeader({ dark, onToggleDark, onLogout, roleLabel, online }) {
   )
 }
 
-function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers, visibleAssignments, onNewDescarga, onFinish, onIncident, onDelete, onEdit, onUpdateCajasAsignadas, online, session }) {
+function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers, visibleAssignments, onNewDescarga, onFinish, onIncident, onDelete, onEdit, onUpdateCajasAsignadas, configPuntos, online, session }) {
   return (
     <div className="space-y-4">
       {isAdmin && (
@@ -295,7 +300,8 @@ function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers
               onIncident={(fotoUrl) => onIncident(a.naveId, fotoUrl)}
               onDelete={() => onDelete(a.naveId)}
               onEdit={(changes) => onEdit(a.naveId, changes)}
-              onUpdateCajasAsignadas={onUpdateCajasAsignadas}
+              onUpdateCajasAsignadas={updateCajasAsignadas}
+              configPuntos={configPuntos}
             />
           )
         })}
@@ -354,7 +360,7 @@ function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, online, activeCou
   )
 }
 
-function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, updateWorkers, setNaves, setProviders, updateAdmin, importRecord, frase, setFrase, categorias, addCategoria }) {
+function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, updateWorkers, setNaves, setProviders, updateAdmin, importRecord, frase, setFrase, categorias, addCategoria, configPuntos, updatePuntosXCaja }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -402,6 +408,8 @@ function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, up
               setFrase={setFrase}
               categorias={categorias}
               onAddCategoria={addCategoria}
+              configPuntos={configPuntos}
+              onUpdatePuntosXCaja={updatePuntosXCaja}
             />
           </div>
         </div>

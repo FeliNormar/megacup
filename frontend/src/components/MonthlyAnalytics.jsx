@@ -4,9 +4,9 @@ import {
 } from 'recharts'
 import { startOfWeek, endOfWeek, format, startOfMonth, endOfMonth, eachWeekOfInterval } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { getCajasWorker, PESO_FACTORES } from '../utils/productividad'
+import { getCajasWorker, PESO_FACTORES, getFactorCarga } from '../utils/productividad'
 
-export default function MonthlyAnalytics({ records = [], dark }) {
+export default function MonthlyAnalytics({ records = [], dark, configPuntos }) {
   const now = new Date()
 
   // Últimos 2 meses
@@ -41,7 +41,7 @@ export default function MonthlyAnalytics({ records = [], dark }) {
           const existingKey = Object.keys(workerMap).find((k) => k.toLowerCase() === normalizedName) ?? name.trim()
           if (!workerMap[existingKey]) workerMap[existingKey] = { name: name.trim(), puntos: 0, cajas: 0, descargas: 0, minutos: 0 }
           const cajas   = getCajasWorker(r, name)
-          const factor  = PESO_FACTORES[r.tipo_carga || r.tipoCarga] ?? 1.0
+          const factor  = getFactorCarga(r.tipo_carga || r.tipoCarga, configPuntos)
           const minutos = (r.endTime - r.startTime) / 60000
           workerMap[existingKey].puntos    += cajas * factor
           workerMap[existingKey].cajas     += cajas
@@ -61,7 +61,7 @@ export default function MonthlyAnalytics({ records = [], dark }) {
       // Totales del mes
       const totalCajas  = inMonth.reduce((acc, r) => acc + (r.cajas_reales || r.cajasReales || 0), 0)
       const totalPuntos = inMonth.reduce((acc, r) => {
-        const factor = PESO_FACTORES[r.tipo_carga || r.tipoCarga] ?? 1.0
+        const factor = getFactorCarga(r.tipo_carga || r.tipoCarga, configPuntos)
         return acc + (r.cajas_reales || r.cajasReales || 0) * factor
       }, 0)
 
@@ -72,7 +72,7 @@ export default function MonthlyAnalytics({ records = [], dark }) {
         )
         const cajas  = inWeek.reduce((acc, r) => acc + (r.cajas_reales || r.cajasReales || 0), 0)
         const puntos = inWeek.reduce((acc, r) => {
-          const factor = PESO_FACTORES[r.tipo_carga || r.tipoCarga] ?? 1.0
+          const factor = getFactorCarga(r.tipo_carga || r.tipoCarga, configPuntos)
           return acc + (r.cajas_reales || r.cajasReales || 0) * factor
         }, 0)
         return {

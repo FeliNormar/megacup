@@ -298,7 +298,7 @@ function ProviderEditor({ providers, onChange }) {
 }
 
 // ── Panel principal con acordeones ────────────────────────────────────────────
-export default function SettingsPanel({ workers, naves, providers, adminCred, onUpdateWorkers, onUpdateNaves, onUpdateProviders, onUpdateAdmin, onImportRecord, frase, setFrase, categorias = [], onAddCategoria }) {
+export default function SettingsPanel({ workers, naves, providers, adminCred, onUpdateWorkers, onUpdateNaves, onUpdateProviders, onUpdateAdmin, onImportRecord, frase, setFrase, categorias = [], onAddCategoria, configPuntos, onUpdatePuntosXCaja }) {
   const [openId, setOpenId] = useState(null)
   const [newUser, setNewUser] = useState('')
   const [newPin, setNewPin] = useState('')
@@ -333,6 +333,10 @@ export default function SettingsPanel({ workers, naves, providers, adminCred, on
 
       <Accordion id="categorias" openId={openId} setOpenId={setOpenId} icon={Package} title="Categorías de Producto" badge={categorias.length}>
         <CategoriasEditor categorias={categorias} onAdd={onAddCategoria} />
+      </Accordion>
+
+      <Accordion id="puntos" openId={openId} setOpenId={setOpenId} icon={Package} title="Puntos por Tipo de Carga">
+        <PuntosEditor configPuntos={configPuntos} onUpdate={onUpdatePuntosXCaja} />
       </Accordion>
 
       <Accordion id="admin" openId={openId} setOpenId={setOpenId} icon={ShieldCheck} title="Credenciales Admin">
@@ -561,6 +565,52 @@ function CategoriasEditor({ categorias = [], onAdd }) {
           <Plus size={16} />
         </button>
       </div>
+    </div>
+  )
+}
+
+// ── Editor de puntos por tipo de carga ───────────────────────────────────────
+function PuntosEditor({ configPuntos, onUpdate }) {
+  const DEFAULT = { ligero: 1.0, semi_pesado: 2.5, pesado: 4.0 }
+  const cfg = configPuntos || DEFAULT
+  const [vals, setVals] = useState({
+    Ligero:       String(cfg.ligero),
+    'Semi pesado': String(cfg.semi_pesado),
+    Pesado:       String(cfg.pesado),
+  })
+  const [saved, setSaved] = useState(null)
+
+  const handleSave = async (tipo) => {
+    const valor = parseFloat(vals[tipo])
+    if (isNaN(valor) || valor <= 0) return
+    await onUpdate?.(tipo, valor)
+    setSaved(tipo)
+    setTimeout(() => setSaved(null), 2000)
+  }
+
+  const tipoKey = { 'Ligero': 'ligero', 'Semi pesado': 'semi_pesado', 'Pesado': 'pesado' }
+  const colores = { 'Ligero': 'text-blue-600', 'Semi pesado': 'text-amber-600', 'Pesado': 'text-red-600' }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-400">
+        Define cuántos puntos vale cada caja según su categoría de peso. Afecta todos los rankings y gráficas en tiempo real.
+      </p>
+      {['Ligero', 'Semi pesado', 'Pesado'].map((tipo) => (
+        <div key={tipo} className="flex items-center gap-3">
+          <span className={`text-sm font-semibold w-24 shrink-0 ${colores[tipo]}`}>{tipo}</span>
+          <input
+            type="number" min="0.1" step="0.1"
+            value={vals[tipo]}
+            onChange={(e) => setVals((p) => ({ ...p, [tipo]: e.target.value }))}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave(tipo)}
+            onBlur={() => handleSave(tipo)}
+            className="w-24 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-indigo-400 text-center font-bold"
+          />
+          <span className="text-xs text-slate-400">pts/caja</span>
+          {saved === tipo && <span className="text-xs text-green-500 font-semibold">✅ Guardado</span>}
+        </div>
+      ))}
     </div>
   )
 }

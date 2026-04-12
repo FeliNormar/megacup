@@ -97,7 +97,7 @@ function ProgressBar({ cajasEstimadas, cajasAsignadas, isAdmin, onUpdateCajas })
 }
 
 // Panel de productividad en vivo — se actualiza cada 10s con props individuales
-function ProductividadEnVivo({ assignmentId, startTime, cajasAsignadas, cajasEstimadas, tipoCarga, descargadores, estibadores }) {
+function ProductividadEnVivo({ assignmentId, startTime, cajasAsignadas, cajasEstimadas, tipoCarga, descargadores, estibadores, configPuntos }) {
   const [datos, setDatos] = useState(null)
 
   useEffect(() => {
@@ -110,11 +110,11 @@ function ProductividadEnVivo({ assignmentId, startTime, cajasAsignadas, cajasEst
       descargadores,
       estibadores,
     }
-    const tick = () => setDatos(calcProductividadEnVivo(assignment))
+    const tick = () => setDatos(calcProductividadEnVivo(assignment, configPuntos))
     tick()
     const id = setInterval(tick, 10000)
     return () => clearInterval(id)
-  }, [assignmentId, cajasAsignadas, cajasEstimadas, tipoCarga, descargadores.length, estibadores.length])
+  }, [assignmentId, cajasAsignadas, cajasEstimadas, tipoCarga, descargadores.length, estibadores.length, configPuntos])
 
   if (!datos || datos.cajasAsignadas === 0) {
     return (
@@ -163,7 +163,7 @@ function ProductividadEnVivo({ assignmentId, startTime, cajasAsignadas, cajasEst
   )
 }
 
-export default function NaveCard({ nave, assignment, isWorker, isAdmin, providers, workers, naves, onFinish, onIncident, onDelete, onEdit, onUpdateCajasAsignadas, session }) {
+export default function NaveCard({ nave, assignment, isWorker, isAdmin, providers, workers, naves, onFinish, onIncident, onDelete, onEdit, onUpdateCajasAsignadas, session, configPuntos }) {
   const [confirmAction,  setConfirmAction]  = useState(null)
   const [showEdit,       setShowEdit]       = useState(false)
   const [showDelConfirm, setShowDelConfirm] = useState(false)
@@ -243,6 +243,7 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
           tipoCarga={assignment.tipo_carga}
           descargadores={assignment.descargadores ?? []}
           estibadores={assignment.estibadores ?? []}
+          configPuntos={configPuntos}
         />
 
         {/* WhatsApp — solo admin */}

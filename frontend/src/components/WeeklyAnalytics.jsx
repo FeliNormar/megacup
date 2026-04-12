@@ -5,7 +5,7 @@ import {
 import { startOfWeek, endOfWeek, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { esDiaOperativo, diasActivosOrdenados } from '../config/operacion'
-import { getCajasWorker, PESO_FACTORES } from '../utils/productividad'
+import { getCajasWorker, PESO_FACTORES, getFactorCarga } from '../utils/productividad'
 
 const COLORES = { 1: '#1a3a8f', 2: '#2563c4', 3: '#0891b2', 4: '#0d9488', 5: '#16a34a', 6: '#f97316' }
 
@@ -15,7 +15,7 @@ function getWeekLabel(date) {
   return `${format(start, 'd MMM', { locale: es })}–${format(end, 'd MMM', { locale: es })}`
 }
 
-export default function WeeklyAnalytics({ records = [], dark }) {
+export default function WeeklyAnalytics({ records = [], dark, configPuntos }) {
   const [selectedWeekOffset, setSelectedWeekOffset] = useState(0)
   const dias = diasActivosOrdenados()
 
@@ -37,7 +37,7 @@ export default function WeeklyAnalytics({ records = [], dark }) {
         dias.forEach((d) => { map[key].dias[d.dayIndex] = { label: d.label, cajas: 0, descargas: 0 } })
       }
       const cajasReales = r.cajas_reales || r.cajasReales || 0
-      const factor      = PESO_FACTORES[r.tipo_carga || r.tipoCarga] ?? 1.0
+      const factor      = getFactorCarga(r.tipo_carga || r.tipoCarga, configPuntos)
       const dayIdx      = new Date(r.startTime).getDay()
       map[key].totalCajas   += cajasReales
       map[key].totalPuntos  += cajasReales * factor
@@ -108,7 +108,7 @@ export default function WeeklyAnalytics({ records = [], dark }) {
         const existingKey = Object.keys(workerMap).find((k) => k.toLowerCase() === normalizedName) ?? name.trim()
         if (!workerMap[existingKey]) workerMap[existingKey] = { name: name.trim(), puntos: 0, cajas: 0, descargas: 0, minutos: 0 }
         const cajas        = getCajasWorker(r, name)
-        const factor       = PESO_FACTORES[r.tipo_carga || r.tipoCarga] ?? 1.0
+        const factor       = getFactorCarga(r.tipo_carga || r.tipoCarga, configPuntos)
         const minutos      = (r.endTime - r.startTime) / 60000
         workerMap[existingKey].puntos    += cajas * factor
         workerMap[existingKey].cajas     += cajas
