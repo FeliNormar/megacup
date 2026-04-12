@@ -1,10 +1,5 @@
 import { useMemo, useState, useRef } from 'react'
-import {
-  Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend
-} from 'chart.js'
-import { Bar } from 'react-chartjs-2'
 import { Printer } from 'lucide-react'
-import { avgMinutesByProvider } from '../utils/time'
 import WeeklyAnalytics        from './WeeklyAnalytics'
 import MonthlyAnalytics       from './MonthlyAnalytics'
 import HistorialFilters       from './HistorialFilters'
@@ -127,27 +122,6 @@ export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, 
         {view === 'weekly' && (
           <>
             <WeeklyAnalytics records={records} dark={dark} />
-            <div className="bg-white dark:bg-[#162050] rounded-2xl p-4 shadow border border-[#8fa3b1]/20 mt-4">
-              <Bar data={chartData} options={chartOptions} />
-            </div>
-            <div className="bg-white dark:bg-[#162050] rounded-2xl p-4 shadow border border-[#8fa3b1]/20 mt-4">
-              <h3 className="font-bold text-base mb-3">Ranking de Eficiencia</h3>
-              {workerRanking.length === 0
-                ? <p className="text-gray-400 text-sm text-center py-4">Sin datos suficientes</p>
-                : <div className="space-y-2">
-                    {workerRanking.map((w, i) => (
-                      <div key={w.name} className="flex items-center gap-3">
-                        <span className="w-6 text-center font-bold text-gray-400 text-sm">#{i + 1}</span>
-                        <span className="flex-1 text-sm font-medium">{w.name}</span>
-                        <span className="text-xs text-gray-500">{w.count} descargas</span>
-                        <span className={`text-sm font-bold ${i === 0 ? 'text-[#1a3a8f] dark:text-[#8fa3b1]' : 'text-gray-600 dark:text-gray-300'}`}>
-                          {w.avg} min
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-              }
-            </div>
           </>
         )}
 
