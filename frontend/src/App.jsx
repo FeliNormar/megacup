@@ -222,6 +222,8 @@ export default function App() {
         setFrase={setFrase}
         categorias={categorias}
         addCategoria={addCategoria}
+        configPuntos={configPuntos}
+        updatePuntosXCaja={updatePuntosXCaja}
       />}
 
       {/* Botón limpiar caché flotante — todos los roles */}
@@ -301,7 +303,7 @@ function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers
               onIncident={(fotoUrl) => onIncident(a.naveId, fotoUrl)}
               onDelete={() => onDelete(a.naveId)}
               onEdit={(changes) => onEdit(a.naveId, changes)}
-              onUpdateCajasAsignadas={updateCajasAsignadas}
+              onUpdateCajasAsignadas={onUpdateCajasAsignadas}
               configPuntos={configPuntos}
             />
           )
