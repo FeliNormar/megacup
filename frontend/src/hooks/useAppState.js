@@ -570,11 +570,11 @@ export function useAppState() {
     return active.filter((a) => a.workers?.includes(session.workerName))
   }, [assignments, session])
 
+  console.log('useAppState return', { configPuntos, updatePuntosXCaja: typeof updatePuntosXCaja })
   return {
     // Estado
     dark, setDark,
-    session, setSession, logout,
-    workers,   setWorkers,
+    session, setSession, logout,    workers,   setWorkers,
     naves,     setNaves,
     providers, setProviders,
     adminCred, setAdminCred,
@@ -601,7 +601,7 @@ export function useAppState() {
     categorias,
     addCategoria,
     configPuntos,
-    updatePuntosXCaja, // v2
+    updatePuntosXCaja, // v2 — if undefined check useAppState runtime errors
     updateCajasAsignadas,
     frase, setFrase,
 
