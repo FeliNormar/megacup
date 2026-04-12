@@ -3,6 +3,7 @@ import { Search, X, ChevronDown, FileSpreadsheet, FileText } from 'lucide-react'
 import { fmtTime, fmtDuration } from '../utils/time'
 import { Trash2, AlertTriangle } from 'lucide-react'
 import { exportToExcel, exportToPDF } from '../utils/export'
+import { calcPuntosRecord, getCajasWorker, PESO_FACTORES } from '../utils/productividad'
 
 const PAGE_SIZE = 50
 
@@ -181,6 +182,7 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
   const [cajasReal,  setCajasReal]  = useState(r.cajasReales    || r.cajas_reales    || '')
   const [descarg,    setDescarg]    = useState(r.descargadores  || [])
   const [estib,      setEstib]      = useState(r.estibadores    || [])
+  const [tipoCarga,  setTipoCarga]  = useState(r.tipoCarga || r.tipo_carga || '')
 
   // Convertir timestamps a formato datetime-local
   const toDatetimeLocal = (ts) => {
@@ -201,6 +203,8 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
       cajasReales:    cajasReal ? Number(cajasReal) : null,
       descargadores:  descarg,
       estibadores:    estib,
+      // Preservar tipoCarga para que el cálculo de puntos sea correcto
+      tipoCarga:      tipoCarga || r.tipoCarga || r.tipo_carga || null,
     }
     if (startVal) changes.startTime = new Date(startVal).getTime()
     if (endVal)   changes.endTime   = new Date(endVal).getTime()
@@ -236,7 +240,7 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
         ))}</p>
       )}
 
-      {/* Cajas */}
+      {/* Cajas + Puntos de productividad */}
       {!editCajas ? (
         <div className="flex items-center gap-3 mt-1 flex-wrap">
           {(r.cajasEstimadas || r.cajas_estimadas) ? (
@@ -251,6 +255,24 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
           {r.estibadores?.length > 0 && (
             <span className="text-xs text-[#8fa3b1]">🏗️ {r.estibadores.join(', ')}</span>
           )}
+          {/* Badge de productividad — calculado en tiempo real */}
+          {r.status === 'finished' && (r.cajasReales || r.cajas_reales) && r.workers?.length > 0 && (() => {
+            const tipoCarga = r.tipoCarga || r.tipo_carga
+            const factor    = PESO_FACTORES[tipoCarga] ?? null
+            const allPts    = r.workers.reduce((acc, w) => acc + calcPuntosRecord(r, w), 0)
+            if (allPts === 0) return null
+            return (
+              <span className="text-xs font-bold text-[#ec4899] bg-pink-50 dark:bg-pink-900/20 px-2 py-0.5 rounded-full">
+                ⚡ {Math.round(allPts)} pts{factor ? ` ×${factor}` : ''}
+              </span>
+            )
+          })()}
+          {/* Aviso si faltan cajas para calcular productividad */}
+          {r.status === 'finished' && !(r.cajasReales || r.cajas_reales) && (
+            <span className="text-xs text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+              ⚠ Sin cajas — editar para calcular pts
+            </span>
+          )}
           {isAdmin && (
             <button onClick={() => setEditCajas(true)} className="text-xs text-[#2563c4] underline">
               Editar
@@ -264,6 +286,25 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
               placeholder="Cajas est." className="w-24 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
             <input type="number" value={cajasReal} onChange={(e) => setCajasReal(e.target.value)}
               placeholder="Cajas real" className="w-24 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+          </div>
+          {/* Tipo de carga — clave para calcular puntos */}
+          <div>
+            <p className="text-xs text-[#8fa3b1] font-semibold mb-1">⚖️ Tipo de carga:</p>
+            <div className="flex gap-1">
+              {Object.keys(PESO_FACTORES).map((t) => (
+                <button key={t} onClick={() => setTipoCarga(t)}
+                  className={`flex-1 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                    tipoCarga === t ? 'bg-[#1a3a8f] border-[#1a3a8f] text-white' : 'border-[#8fa3b1]/40 text-[#8fa3b1]'
+                  }`}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            {tipoCarga && (
+              <p className="text-[10px] text-[#8fa3b1] mt-0.5">
+                Factor ×{PESO_FACTORES[tipoCarga]} · {cajasReal ? `${Math.round(Number(cajasReal) * PESO_FACTORES[tipoCarga])} pts totales` : 'ingresa cajas para ver pts'}
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <p className="text-xs text-[#8fa3b1] font-semibold">🕐 Hora inicio:</p>

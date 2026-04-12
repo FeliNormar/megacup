@@ -5,15 +5,16 @@ import {
 import { Bar } from 'react-chartjs-2'
 import { Printer } from 'lucide-react'
 import { avgMinutesByProvider } from '../utils/time'
-import WeeklyAnalytics   from './WeeklyAnalytics'
-import MonthlyAnalytics  from './MonthlyAnalytics'
-import HistorialFilters  from './HistorialFilters'
+import WeeklyAnalytics        from './WeeklyAnalytics'
+import MonthlyAnalytics       from './MonthlyAnalytics'
+import HistorialFilters       from './HistorialFilters'
+import ProductividadAnalytics from './ProductividadAnalytics'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const PROVIDERS = ['Pactiv', 'Arero', 'Maver', 'Dart', 'Desola', 'Biodeli']
 
-export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab, recordsPage, recordsTotal, recordsPageSize, fetchRecordsPage }) {
+export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab, recordsPage, recordsTotal, recordsPageSize, fetchRecordsPage, trailersCierre = [] }) {
   const [view, setView] = useState(defaultTab === 'history' ? 'history' : 'weekly')
   const printRef = useRef(null)
 
@@ -91,9 +92,10 @@ export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, 
   }
 
   const tabs = [
-    { id: 'weekly',   label: 'Semanal'  },
-    { id: 'monthly',  label: 'Mensual'  },
-    { id: 'history',  label: 'Historial'},
+    { id: 'weekly',        label: 'Semanal'       },
+    { id: 'monthly',       label: 'Mensual'        },
+    { id: 'productividad', label: '🏆 Productiv.' },
+    { id: 'history',       label: 'Historial'      },
   ]
 
   return (
@@ -110,7 +112,7 @@ export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, 
             </button>
           ))}
         </div>
-        {view !== 'history' && (
+        {view !== 'history' && view !== 'productividad' && (
           <button onClick={handlePrint}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1a3a8f] text-white text-xs font-semibold">
             <Printer size={14} /> Imprimir
@@ -151,6 +153,15 @@ export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, 
           <MonthlyAnalytics records={records} dark={dark} />
         )}
       </div>
+
+      {view === 'productividad' && (
+        <ProductividadAnalytics
+          records={records}
+          trailersCierre={trailersCierre}
+          dark={dark}
+          workers={workers}
+        />
+      )}
 
       {view === 'history' && (
         <div className="bg-white dark:bg-[#162050] rounded-2xl p-4 shadow border border-[#8fa3b1]/20">

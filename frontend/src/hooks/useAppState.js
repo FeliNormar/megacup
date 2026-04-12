@@ -104,6 +104,27 @@ export function useAppState() {
           setAssignments({})
           ls.set('mc_assignments', {})
         }
+        // Cargar trailers de cierre del día actual
+        const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+        const { data: trailersData } = await supabase
+          .from('trailers_cierre')
+          .select('*')
+          .gte('timestamp', hoy.getTime())
+          .order('timestamp', { ascending: false })
+        if (trailersData?.length > 0) {
+          // Normalizar snake_case a camelCase
+          const normalized = trailersData.map((t) => ({
+            ...t,
+            cajasTrailer:  t.cajas_trailer,
+            tipoCarga:     t.tipo_carga,
+            gruposActivos: t.grupos_activos,
+            cajasPorGrupo: t.cajas_x_grupo,
+            puntosXGrupo:  t.puntos_x_grupo,
+          }))
+          setTrailersCierre(normalized)
+          ls.set('mc_trailers_cierre', normalized)
+        }
+
         const { data: recordsData } = await supabase.from('records').select('*').is('deleted_at', null).order('endTime', { ascending: false }).limit(50)
         if (recordsData && recordsData.length > 0) setRecords(recordsData)
         const { data: workersData } = await supabase.from('workers').select('*')
@@ -158,7 +179,32 @@ export function useAppState() {
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    // ── Realtime: trailers_cierre — actualiza puntos en todos los dispositivos ──
+    const trailerChannel = supabase
+      .channel('trailers-cierre-sync')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trailers_cierre' }, (payload) => {
+        const t = payload.new
+        const normalized = {
+          ...t,
+          cajasTrailer:  t.cajas_trailer,
+          tipoCarga:     t.tipo_carga,
+          gruposActivos: t.grupos_activos,
+          cajasPorGrupo: t.cajas_x_grupo,
+          puntosXGrupo:  t.puntos_x_grupo,
+        }
+        setTrailersCierre((prev) => {
+          // Evitar duplicados si ya lo tenemos en local
+          if (prev.find((x) => x.id === normalized.id)) return prev
+          toast(`🚛 Trailer registrado: +${normalized.puntosXGrupo} pts por grupo`)
+          return [normalized, ...prev]
+        })
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+      supabase.removeChannel(trailerChannel)
+    }
   }, [])
 
   // ── Persistencia automática ───────────────────────────────────────────────
@@ -213,6 +259,31 @@ export function useAppState() {
     } catch (err) {
       console.error('Error sync admin:', err)
     }
+  }
+
+  // ── Trailer de cierre del día ─────────────────────────────────────────────
+  const [trailersCierre, setTrailersCierre] = useState(() => ls.get('mc_trailers_cierre', []))
+  useEffect(() => { ls.set('mc_trailers_cierre', trailersCierre) }, [trailersCierre])
+
+  const registrarTrailerCierre = async (data) => {
+    const entry = { id: uid(), ...data, creadoEn: Date.now() }
+    setTrailersCierre((prev) => [entry, ...prev])
+    try {
+      await supabase.from('trailers_cierre').insert([{
+        id:              entry.id,
+        cajas_trailer:   entry.cajasTrailer,
+        tipo_carga:      entry.tipoCarga,
+        grupos_activos:  entry.gruposActivos,
+        cajas_x_grupo:   entry.cajasPorGrupo,
+        puntos_x_grupo:  entry.puntosXGrupo,
+        timestamp:       entry.timestamp,
+        creado_en:       new Date(entry.creadoEn).toISOString(),
+      }])
+    } catch (err) {
+      // La tabla puede no existir aún — se guarda en local de todas formas
+      console.warn('trailers_cierre no disponible en Supabase aún:', err.message)
+    }
+    toast('✅ Trailer registrado y puntos distribuidos')
   }
 
   const importRecord = async (data) => {
@@ -399,6 +470,27 @@ export function useAppState() {
   }
 
   const editRecord = async (id, changes) => {
+    // ── Recalcular cajas por rol automáticamente ──────────────────────────
+    // Si se editan cajasReales o los roles, recalcular cajasXDescargador/Estibador
+    const existing = records.find((r) => r.id === id) || {}
+    const merged   = { ...existing, ...changes }
+
+    const cajasReales   = changes.cajasReales    ?? changes.cajas_reales    ?? existing.cajasReales    ?? existing.cajas_reales    ?? null
+    const descargadores = changes.descargadores  ?? existing.descargadores  ?? []
+    const estibadores   = changes.estibadores    ?? existing.estibadores    ?? []
+
+    if (cajasReales) {
+      if (descargadores.length > 0 && !changes.cajasXDescargador && !changes.cajas_x_descargador) {
+        changes.cajasXDescargador    = Math.round(cajasReales / descargadores.length)
+        changes.cajas_x_descargador  = changes.cajasXDescargador
+      }
+      if (estibadores.length > 0 && !changes.cajasXEstibador && !changes.cajas_x_estibador) {
+        changes.cajasXEstibador   = Math.round(cajasReales / estibadores.length)
+        changes.cajas_x_estibador = changes.cajasXEstibador
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     setRecords((prev) => prev.map((r) => r.id === id ? { ...r, ...changes } : r))
     // Mapear a snake_case para Supabase
     const supabaseChanges = {}
@@ -464,6 +556,8 @@ export function useAppState() {
     updateWorkers,
     updateAdmin,
     importRecord,
+    trailersCierre,
+    registrarTrailerCierre,
     frase, setFrase,
 
     // Derivados
