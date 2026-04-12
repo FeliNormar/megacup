@@ -96,16 +96,25 @@ function ProgressBar({ cajasEstimadas, cajasAsignadas, isAdmin, onUpdateCajas })
   )
 }
 
-// Panel de productividad en vivo — se actualiza cada 30s
-function ProductividadEnVivo({ assignment }) {
-  const [datos, setDatos] = useState(() => calcProductividadEnVivo(assignment))
+// Panel de productividad en vivo — se actualiza cada 10s con props individuales
+function ProductividadEnVivo({ assignmentId, startTime, cajasAsignadas, cajasEstimadas, tipoCarga, descargadores, estibadores }) {
+  const [datos, setDatos] = useState(null)
 
   useEffect(() => {
+    const assignment = {
+      id:               assignmentId,
+      startTime,
+      cajas_asignadas:  cajasAsignadas,
+      cajas_estimadas:  cajasEstimadas,
+      tipo_carga:       tipoCarga,
+      descargadores,
+      estibadores,
+    }
     const tick = () => setDatos(calcProductividadEnVivo(assignment))
     tick()
-    const id = setInterval(tick, 30000)
+    const id = setInterval(tick, 10000)
     return () => clearInterval(id)
-  }, [assignment.id, assignment.cajas_asignadas, assignment.tipo_carga])
+  }, [assignmentId, cajasAsignadas, cajasEstimadas, tipoCarga, descargadores.length, estibadores.length])
 
   if (!datos || datos.cajasAsignadas === 0) {
     return (
@@ -226,7 +235,15 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
         />
 
         {/* Productividad en vivo */}
-        <ProductividadEnVivo assignment={assignment} />
+        <ProductividadEnVivo
+          assignmentId={assignment.id}
+          startTime={assignment.startTime}
+          cajasAsignadas={assignment.cajas_asignadas ?? 0}
+          cajasEstimadas={assignment.cajas_estimadas ?? 0}
+          tipoCarga={assignment.tipo_carga}
+          descargadores={assignment.descargadores ?? []}
+          estibadores={assignment.estibadores ?? []}
+        />
 
         {/* WhatsApp — solo admin */}
         {isAdmin && assignment.workers?.length > 0 && (
