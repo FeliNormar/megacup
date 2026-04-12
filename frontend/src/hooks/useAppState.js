@@ -601,7 +601,7 @@ export function useAppState() {
     categorias,
     addCategoria,
     configPuntos,
-    updatePuntosXCaja,
+    updatePuntosXCaja, // v2
     updateCajasAsignadas,
     frase, setFrase,
 
