@@ -303,6 +303,8 @@ export default function SettingsPanel({ workers, naves, providers, adminCred, on
   const [newUser, setNewUser] = useState('')
   const [newPin, setNewPin] = useState('')
   const [msg, setMsg] = useState('')
+
+  console.log('SettingsPanel props', { configPuntos, onUpdatePuntosXCaja: typeof onUpdatePuntosXCaja })
   const [fraseEdit, setFraseEdit] = useState(frase || '')
 
   const saveAdmin = () => {
