@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { Printer } from 'lucide-react'
 import WeeklyAnalytics        from './WeeklyAnalytics'
 import MonthlyAnalytics       from './MonthlyAnalytics'
@@ -6,59 +6,10 @@ import HistorialFilters       from './HistorialFilters'
 import ProductividadAnalytics from './ProductividadAnalytics'
 import InformeProductividad   from './InformeProductividad'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
-
-const PROVIDERS = ['Pactiv', 'Arero', 'Maver', 'Dart', 'Desola', 'Biodeli']
-
 export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab, recordsPage, recordsTotal, recordsPageSize, fetchRecordsPage, trailersCierre = [], categorias = [], assignments = [] }) {
   const [view, setView] = useState(defaultTab === 'history' ? 'history' : 'weekly')
   const [showInforme, setShowInforme] = useState(false)
   const printRef = useRef(null)
-
-  const now   = new Date()
-  const curM  = now.getMonth()
-  const curY  = now.getFullYear()
-  const prevM = curM === 0 ? 11 : curM - 1
-  const prevY = curM === 0 ? curY - 1 : curY
-
-  const dataCur  = useMemo(() => PROVIDERS.map((p) => avgMinutesByProvider(records, p, curM,  curY)),  [records])
-  const dataPrev = useMemo(() => PROVIDERS.map((p) => avgMinutesByProvider(records, p, prevM, prevY)), [records])
-
-  const workerRanking = useMemo(() => {
-    const map = {}
-    records.filter((r) => r.endTime && r.startTime).forEach((r) => {
-      const mins = (r.endTime - r.startTime) / 60000
-      ;(r.workers || []).forEach((w) => {
-        if (!map[w]) map[w] = { total: 0, count: 0 }
-        map[w].total += mins
-        map[w].count += 1
-      })
-    })
-    return Object.entries(map)
-      .map(([name, { total, count }]) => ({ name, avg: Math.round(total / count), count }))
-      .sort((a, b) => a.avg - b.avg)
-      .slice(0, 8)
-  }, [records])
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: { labels: { color: dark ? '#d1d5db' : '#374151' } },
-      title:  { display: true, text: 'Tiempo promedio por proveedor (min)', color: dark ? '#f9fafb' : '#111827' }
-    },
-    scales: {
-      x: { ticks: { color: dark ? '#9ca3af' : '#6b7280' }, grid: { color: dark ? '#374151' : '#e5e7eb' } },
-      y: { ticks: { color: dark ? '#9ca3af' : '#6b7280' }, grid: { color: dark ? '#374151' : '#e5e7eb' } }
-    }
-  }
-
-  const chartData = {
-    labels: PROVIDERS,
-    datasets: [
-      { label: 'Mes actual',   data: dataCur,  backgroundColor: '#1a3a8f' },
-      { label: 'Mes anterior', data: dataPrev, backgroundColor: '#8fa3b1' }
-    ]
-  }
 
   const handlePrint = () => {
     const content = printRef.current
