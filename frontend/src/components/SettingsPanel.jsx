@@ -442,6 +442,7 @@ function ImportRecord({ workers, naves, providers, onSave }) {
           <select value={tipoCarga} onChange={e => setTipoCarga(e.target.value)} className={inputCls}>
             <option value="">—</option>
             <option value="Ligero">Ligero</option>
+            <option value="Semi pesado">Semi pesado</option>
             <option value="Pesado">Pesado</option>
           </select>
         </div>

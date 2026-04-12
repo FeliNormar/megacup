@@ -296,10 +296,11 @@ export function useAppState() {
   }
 
   const importRecord = async (data) => {
-    const cajasXDesc = data.cajasReales && data.descargadores?.length > 0
-      ? data.cajasReales / data.descargadores.length : null
-    const cajasXEstib = data.cajasReales && data.estibadores?.length > 0
-      ? data.cajasReales / data.estibadores.length : null
+    const descargadores   = data.descargadores || []
+    const estibadores     = data.estibadores   || []
+    const todosLosWorkers = [...new Set([...descargadores, ...estibadores])]
+    const cajasXDesc  = data.cajasReales && todosLosWorkers.length > 0 ? data.cajasReales / todosLosWorkers.length : null
+    const cajasXEstib = data.cajasReales && todosLosWorkers.length > 0 ? data.cajasReales / todosLosWorkers.length : null
     const record = {
       id:                  uid(),
       naveId:              data.naveId,
