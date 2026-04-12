@@ -63,7 +63,7 @@ function calcRankingHistorico(records, assignments = []) {
     .sort((a, b) => b.puntosTotales - a.puntosTotales)
 }
 
-export default function ProductividadAnalytics({ records = [], trailersCierre = [], dark, workers = [], assignments = [] }) {
+export default function ProductividadAnalytics({ records = [], trailersCierre = [], dark, workers = [], assignments = [], configPuntos }) {
   const [rango,        setRango]        = useState('semana')   // 'semana' | 'mes' | 'todo'
   const [workerFocus,  setWorkerFocus]  = useState(null)       // operador seleccionado para tendencia
 
@@ -238,16 +238,20 @@ export default function ProductividadAnalytics({ records = [], trailersCierre = 
             </div>
           )}
 
-          {/* Tabla de factores de peso — referencia */}
+          {/* Tabla de factores de peso — lee de configPuntos si está disponible */}
           <div className="bg-white dark:bg-[#162050] rounded-2xl p-4 shadow border border-[#8fa3b1]/20">
             <p className="font-bold text-sm text-slate-800 dark:text-white mb-3">Factores de peso aplicados</p>
             <div className="space-y-2">
-              {Object.entries(PESO_FACTORES).map(([cat, factor]) => (
+              {[
+                { cat: 'Ligero',      factor: configPuntos?.ligero      ?? 1.0, max: configPuntos?.pesado ?? 4.0 },
+                { cat: 'Semi pesado', factor: configPuntos?.semi_pesado ?? 2.5, max: configPuntos?.pesado ?? 4.0 },
+                { cat: 'Pesado',      factor: configPuntos?.pesado      ?? 4.0, max: configPuntos?.pesado ?? 4.0 },
+              ].map(({ cat, factor, max }) => (
                 <div key={cat} className="flex items-center gap-3">
                   <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-[#1a3a8f]"
-                      style={{ width: `${(factor / 4) * 100}%` }}
+                      style={{ width: `${(factor / (max || 4)) * 100}%` }}
                     />
                   </div>
                   <span className="text-xs font-semibold text-slate-700 dark:text-white w-24 shrink-0">{cat}</span>
