@@ -1,10 +1,11 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { CheckCircle, AlertTriangle, Clock, Package, Truck, Users, Trash2, Pencil, X, Camera, Download } from 'lucide-react'
 import { useTimer } from '../hooks/useTimer'
 import { fmtElapsed } from '../utils/time'
 import { supabase } from '../utils/supabase'
 import CapturaPanel from './CapturaPanel'
 import { exportComparativaExcel } from '../utils/export'
+import { calcProductividadEnVivo } from '../utils/productividad'
 
 // Colores del cronómetro según tiempo transcurrido vs promedio estimado
 function timerColor(elapsed, cajasEstimadas) {
@@ -95,6 +96,64 @@ function ProgressBar({ cajasEstimadas, cajasAsignadas, isAdmin, onUpdateCajas })
   )
 }
 
+// Panel de productividad en vivo — se actualiza cada 30s
+function ProductividadEnVivo({ assignment }) {
+  const [datos, setDatos] = useState(() => calcProductividadEnVivo(assignment))
+
+  useEffect(() => {
+    const tick = () => setDatos(calcProductividadEnVivo(assignment))
+    tick()
+    const id = setInterval(tick, 30000)
+    return () => clearInterval(id)
+  }, [assignment.id, assignment.cajas_asignadas, assignment.tipo_carga])
+
+  if (!datos || datos.cajasAsignadas === 0) {
+    return (
+      <div className="rounded-xl bg-slate-50 dark:bg-[#1a3a8f]/10 px-3 py-2 text-xs text-[#8fa3b1] text-center">
+        ⚡ Sin datos aún — asigna cajas para ver productividad en vivo
+      </div>
+    )
+  }
+
+  const fmtMin = (m) => m >= 60
+    ? `${Math.floor(m / 60)}h ${m % 60}m`
+    : `${m}m`
+
+  return (
+    <div className="rounded-xl bg-[#1a3a8f]/5 dark:bg-[#1a3a8f]/20 border border-[#1a3a8f]/15 px-3 py-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold text-[#1a3a8f] dark:text-[#8fa3b1] uppercase tracking-wide">⚡ Productividad en vivo</p>
+        <p className="text-[10px] text-[#8fa3b1]">⏱ {fmtMin(datos.minutosTranscurridos)}</p>
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div>
+          <p className="text-[10px] text-[#8fa3b1] leading-none mb-0.5">Cajas/hora</p>
+          <p className="font-black text-sm text-slate-800 dark:text-white">{datos.cajasXHoraTotal}</p>
+          <p className="text-[10px] text-[#8fa3b1]">total</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-[#8fa3b1] leading-none mb-0.5">Cajas/hora</p>
+          <p className="font-black text-sm text-[#2563c4]">{datos.cajasXHoraXPersona}</p>
+          <p className="text-[10px] text-[#8fa3b1]">x persona</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-[#8fa3b1] leading-none mb-0.5">Pts/hora</p>
+          <p className="font-black text-sm text-[#ec4899]">{datos.puntosXHoraXPersona}</p>
+          <p className="text-[10px] text-[#8fa3b1]">x persona</p>
+        </div>
+      </div>
+      {datos.minutosEstimados && (
+        <p className="text-[10px] text-[#8fa3b1] text-center">
+          Estimado para terminar: <span className="font-bold text-slate-700 dark:text-white">{fmtMin(datos.minutosEstimados)}</span>
+          {datos.minutosEstimados > datos.minutosTranscurridos
+            ? ` · faltan ~${fmtMin(datos.minutosEstimados - datos.minutosTranscurridos)}`
+            : ' · ¡ya debería estar listo!'}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function NaveCard({ nave, assignment, isWorker, isAdmin, providers, workers, naves, onFinish, onIncident, onDelete, onEdit, onUpdateCajasAsignadas, session }) {
   const [confirmAction,  setConfirmAction]  = useState(null)
   const [showEdit,       setShowEdit]       = useState(false)
@@ -165,6 +224,9 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
           isAdmin={isAdmin}
           onUpdateCajas={(n) => onUpdateCajasAsignadas?.(assignment.id, n)}
         />
+
+        {/* Productividad en vivo */}
+        <ProductividadEnVivo assignment={assignment} />
 
         {/* WhatsApp — solo admin */}
         {isAdmin && assignment.workers?.length > 0 && (

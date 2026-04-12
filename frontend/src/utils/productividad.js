@@ -52,10 +52,48 @@ export function getDuracionMin(record) {
 }
 
 /**
- * Calcula el resumen de productividad de un operador para un conjunto de registros.
+ * Calcula la productividad en vivo de una descarga activa.
+ * Usa cajas_asignadas y el tiempo transcurrido desde startTime.
+ */
+export function calcProductividadEnVivo(assignment) {
+  const ahora   = Date.now()
+  const minutos = (ahora - assignment.startTime) / 60000
+  if (minutos <= 0) return null
+
+  const cajas         = assignment.cajas_asignadas ?? 0
+  const descargadores = assignment.descargadores ?? assignment.workers ?? []
+  const estibadores   = assignment.estibadores   ?? []
+  const totalPersonas = descargadores.length + estibadores.length
+  if (totalPersonas === 0) return null
+
+  const factor = PESO_FACTORES[assignment.tipo_carga] ?? 1.0
+
+  const cajasXHoraTotal     = (cajas / minutos) * 60
+  const cajasXHoraXPersona  = cajasXHoraTotal / totalPersonas
+  const puntosXHoraXPersona = cajasXHoraXPersona * factor
+  const cajasEstimadas      = assignment.cajas_estimadas ?? 0
+  const minutosEstimados    = cajas > 0 && cajasEstimadas > 0
+    ? (cajasEstimadas / cajas) * minutos
+    : null
+
+  return {
+    cajasXHoraTotal:      Math.round(cajasXHoraTotal * 10) / 10,
+    cajasXHoraXPersona:   Math.round(cajasXHoraXPersona * 10) / 10,
+    puntosXHoraXPersona:  Math.round(puntosXHoraXPersona * 10) / 10,
+    minutosTranscurridos: Math.round(minutos),
+    cajasAsignadas:       cajas,
+    totalPersonas,
+    cajasEstimadas,
+    minutosEstimados:     minutosEstimados ? Math.round(minutosEstimados) : null,
+  }
+}
+
+/**
+ * Calcula el resumen de productividad de un operador.
+ * Incluye descargas terminadas (records) y activas (assignments) del día.
  * Retorna: { puntosTotales, minutosTotales, ptsPorMin, cajasTotales, descargas }
  */
-export function calcResumenWorker(records, workerName) {
+export function calcResumenWorker(records, workerName, assignments = []) {
   const myRecords = records.filter(
     (r) => r.workers?.includes(workerName) && r.endTime && r.startTime && r.status === 'finished'
   )
@@ -70,13 +108,26 @@ export function calcResumenWorker(records, workerName) {
     cajasTotales   += getCajasWorker(r, workerName)
   })
 
+  // Sumar descargas activas en vivo
+  assignments
+    .filter((a) => a.status === 'active' && a.workers?.includes(workerName) && (a.cajas_asignadas ?? 0) > 0)
+    .forEach((a) => {
+      const vivo = calcProductividadEnVivo(a)
+      if (!vivo) return
+      const factor = PESO_FACTORES[a.tipo_carga] ?? 1.0
+      const cajasWorker = (a.cajas_asignadas ?? 0) / vivo.totalPersonas
+      puntosTotales  += cajasWorker * factor
+      minutosTotales += vivo.minutosTranscurridos
+      cajasTotales   += cajasWorker
+    })
+
   const ptsPorMin = minutosTotales > 0 ? puntosTotales / minutosTotales : 0
 
   return {
     puntosTotales:  Math.round(puntosTotales),
     minutosTotales: Math.round(minutosTotales),
     ptsPorMin:      Math.round(ptsPorMin * 10) / 10,
-    cajasTotales,
+    cajasTotales:   Math.round(cajasTotales),
     descargas:      myRecords.length,
   }
 }
@@ -95,13 +146,18 @@ export function recordsDeHoy(records) {
  * Retorna array ordenado de mayor a menor puntos totales:
  * [{ workerName, ptsPorMin, puntosTotales, cajasTotales, minutosTotales, descargas }]
  */
-export function calcRankingDia(records) {
+export function calcRankingDia(records, assignments = []) {
   const hoy = recordsDeHoy(records).filter((r) => r.status === 'finished')
 
-  const operadores = [...new Set(hoy.flatMap((r) => r.workers || []))]
+  // Operadores de records terminados + activos del día
+  const hoyTs = (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime() })()
+  const desdeActivos = assignments
+    .filter((a) => a.status === 'active' && a.startTime >= hoyTs)
+    .flatMap((a) => a.workers || [])
+  const operadores = [...new Set([...hoy.flatMap((r) => r.workers || []), ...desdeActivos])]
 
   const ranking = operadores.map((name) => {
-    const res = calcResumenWorker(hoy, name)
+    const res = calcResumenWorker(hoy, name, assignments)
     return { workerName: name, ...res }
   })
 

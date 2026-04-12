@@ -163,11 +163,12 @@ export default function App() {
               fetchRecordsPage={fetchRecordsPage}
               trailersCierre={trailersCierre}
               categorias={categorias}
+              assignments={Object.values(assignments)}
             />
           )}
 
           {tab === 'history' && isWorker && (
-            <WorkerPanel records={records} workerName={session.workerName} trailersCierre={trailersCierre} />
+            <WorkerPanel records={records} workerName={session.workerName} trailersCierre={trailersCierre} assignments={assignments} />
           )}
 
           {tab === 'settings' && isAdmin && (

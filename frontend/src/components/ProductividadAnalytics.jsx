@@ -53,17 +53,17 @@ function agruparPorDia(records, workerName, dias = 14) {
 }
 
 /** Ranking histórico para un rango de records */
-function calcRankingHistorico(records, trailersCierre = []) {
+function calcRankingHistorico(records, assignments = []) {
   const operadores = [...new Set(records.flatMap((r) => r.workers || []))]
   return operadores
     .map((name) => {
-      const res = calcResumenWorker(records, name)
+      const res = calcResumenWorker(records, name, assignments)
       return { workerName: name, ...res }
     })
     .sort((a, b) => b.puntosTotales - a.puntosTotales)
 }
 
-export default function ProductividadAnalytics({ records = [], trailersCierre = [], dark, workers = [] }) {
+export default function ProductividadAnalytics({ records = [], trailersCierre = [], dark, workers = [], assignments = [] }) {
   const [rango,        setRango]        = useState('semana')   // 'semana' | 'mes' | 'todo'
   const [workerFocus,  setWorkerFocus]  = useState(null)       // operador seleccionado para tendencia
 
@@ -75,8 +75,8 @@ export default function ProductividadAnalytics({ records = [], trailersCierre = 
   )
 
   const rankingHistorico = useMemo(
-    () => calcRankingHistorico(recordsFiltrados),
-    [recordsFiltrados]
+    () => calcRankingHistorico(recordsFiltrados, assignments),
+    [recordsFiltrados, assignments]
   )
 
   // Operadores únicos con actividad en el rango

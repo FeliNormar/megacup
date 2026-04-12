@@ -15,7 +15,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const PROVIDERS = ['Pactiv', 'Arero', 'Maver', 'Dart', 'Desola', 'Biodeli']
 
-export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab, recordsPage, recordsTotal, recordsPageSize, fetchRecordsPage, trailersCierre = [], categorias = [] }) {
+export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab, recordsPage, recordsTotal, recordsPageSize, fetchRecordsPage, trailersCierre = [], categorias = [], assignments = [] }) {
   const [view, setView] = useState(defaultTab === 'history' ? 'history' : 'weekly')
   const [showInforme, setShowInforme] = useState(false)
   const printRef = useRef(null)
@@ -162,6 +162,7 @@ export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, 
           trailersCierre={trailersCierre}
           dark={dark}
           workers={workers}
+          assignments={assignments}
         />
       )}
 
