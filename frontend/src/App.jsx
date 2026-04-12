@@ -13,7 +13,6 @@ import SettingsPanel       from './components/SettingsPanel'
 import ToastContainer      from './components/ToastContainer'
 import PageTransition      from './components/PageTransition'
 import WorkerPanel         from './components/WorkerPanel'
-import TrailerCierreModal  from './components/TrailerCierreModal'
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Descargas' },
@@ -25,7 +24,6 @@ const NAV_ITEMS = [
 export default function App() {
   const [tab,          setTab]          = useState('dashboard')
   const [showNew,      setShowNew]      = useState(false)
-  const [showTrailer,  setShowTrailer]  = useState(false)
 
   const {
     dark, setDark,
@@ -55,7 +53,8 @@ export default function App() {
     editRecord,
     importRecord,
     trailersCierre,
-    registrarTrailerCierre,
+    categorias,
+    addCategoria,
     frase, setFrase,
   } = useAppState()
 
@@ -121,7 +120,6 @@ export default function App() {
               workers={workers}
               visibleAssignments={visibleAssignments}
               onNewDescarga={() => setTab('new')}
-              onTrailerCierre={() => setShowTrailer(true)}
               onFinish={finishDescarga}
               onIncident={reportIncident}
               onDelete={softDeleteAssignment}
@@ -138,6 +136,7 @@ export default function App() {
               providers={providers}
               activeNaveIds={activeNaveIds}
               adminCred={adminCred}
+              categorias={categorias}
               onSave={(data) => { createDescarga(data); setTab('dashboard') }}
               onClose={() => setTab('dashboard')}
               inline
@@ -161,6 +160,7 @@ export default function App() {
               recordsPageSize={recordsPageSize}
               fetchRecordsPage={fetchRecordsPage}
               trailersCierre={trailersCierre}
+              categorias={categorias}
             />
           )}
 
@@ -179,6 +179,8 @@ export default function App() {
               onUpdateProviders={setProviders}
               onUpdateAdmin={updateAdmin}
               onImportRecord={importRecord}
+              categorias={categorias}
+              onAddCategoria={addCategoria}
             />
           )}
           </PageTransition>
@@ -209,21 +211,12 @@ export default function App() {
         importRecord={importRecord}
         frase={frase}
         setFrase={setFrase}
+        categorias={categorias}
+        addCategoria={addCategoria}
       />}
 
       {/* Botón limpiar caché flotante — todos los roles */}
       <ClearCacheButton />
-
-      {/* Modal trailer de cierre — solo admin */}
-      {showTrailer && isAdmin && (
-        <TrailerCierreModal
-          records={records}
-          workers={workers}
-          trailersCierre={trailersCierre}
-          onSave={(data) => { registrarTrailerCierre(data); setShowTrailer(false) }}
-          onClose={() => setShowTrailer(false)}
-        />
-      )}
     </div>
   )
 }
@@ -263,29 +256,19 @@ function AppHeader({ dark, onToggleDark, onLogout, roleLabel, online }) {
   )
 }
 
-function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers, visibleAssignments, onNewDescarga, onTrailerCierre, onFinish, onIncident, onDelete, onEdit, online, session }) {
+function Dashboard({ isAdmin, isWorker, isAlmacenista, naves, providers, workers, visibleAssignments, onNewDescarga, onFinish, onIncident, onDelete, onEdit, online, session }) {
   return (
     <div className="space-y-4">
       {isAdmin && (
-        <div className="flex gap-2">
-          <button
-            onClick={onNewDescarga}
-            disabled={!online}
-            className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-4 text-white font-bold text-base shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}
-          >
-            <PlusCircle size={22} />
-            Nueva Descarga
-          </button>
-          <button
-            onClick={onTrailerCierre}
-            disabled={!online}
-            className="flex items-center justify-center gap-1.5 rounded-2xl px-4 py-4 font-bold text-sm shadow-lg active:scale-95 transition-transform disabled:opacity-50 border-2 border-[#1a3a8f] text-[#1a3a8f] dark:text-white dark:border-white/30"
-            title="Registrar trailer de cierre"
-          >
-            🚛 Trailer
-          </button>
-        </div>
+        <button
+          onClick={onNewDescarga}
+          disabled={!online}
+          className="w-full flex items-center justify-center gap-3 rounded-2xl py-4 text-white font-bold text-base shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}
+        >
+          <PlusCircle size={22} />
+          Nueva Descarga
+        </button>
       )}
 
       {visibleAssignments.length === 0 ? (
@@ -367,7 +350,7 @@ function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, online, activeCou
   )
 }
 
-function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, updateWorkers, setNaves, setProviders, updateAdmin, importRecord, frase, setFrase }) {
+function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, updateWorkers, setNaves, setProviders, updateAdmin, importRecord, frase, setFrase, categorias, addCategoria }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -413,6 +396,8 @@ function ConfigMenu({ tab, onTabChange, workers, naves, providers, adminCred, up
               onImportRecord={importRecord}
               frase={frase}
               setFrase={setFrase}
+              categorias={categorias}
+              onAddCategoria={addCategoria}
             />
           </div>
         </div>

@@ -18,26 +18,17 @@ export const PESO_FACTORES = {
  * Respeta la lógica existente: cajasXDescargador / cajasXEstibador / división equitativa.
  */
 export function getCajasWorker(record, workerName) {
-  const esDesc  = record.descargadores?.includes(workerName)
-  const esEstib = record.estibadores?.includes(workerName)
-
-  // Primero intentar campos pre-calculados
-  if (esDesc  && (record.cajasXDescargador || record.cajas_x_descargador))
-    return record.cajasXDescargador || record.cajas_x_descargador
-  if (esEstib && (record.cajasXEstibador || record.cajas_x_estibador))
-    return record.cajasXEstibador || record.cajas_x_estibador
-
-  // Calcular en tiempo real si hay cajas reales y roles definidos
-  const cajasReales = record.cajasReales || record.cajas_reales
-  if (cajasReales) {
-    if (esDesc  && record.descargadores?.length > 0)
-      return Math.round(cajasReales / record.descargadores.length)
-    if (esEstib && record.estibadores?.length > 0)
-      return Math.round(cajasReales / record.estibadores.length)
-    // Sin roles específicos: división equitativa entre todos los workers
-    if (record.workers?.includes(workerName) && record.workers.length > 0)
-      return Math.round(cajasReales / record.workers.length)
-  }
+  const descargadores = record.descargadores ?? record.workers ?? []
+  const estibadores   = record.estibadores   ?? []
+  const cajasReales   = record.cajas_reales  ?? 0
+  const esDesc  = descargadores.includes(workerName)
+  const esEstib = estibadores.includes(workerName)
+  if (esDesc && descargadores.length > 0)
+    return cajasReales / descargadores.length
+  if (esEstib && estibadores.length > 0)
+    return cajasReales / estibadores.length
+  if (cajasReales > 0 && record.workers?.length > 0)
+    return cajasReales / record.workers.length
   return 0
 }
 
@@ -100,64 +91,29 @@ export function recordsDeHoy(records) {
 }
 
 /**
- * Suma los puntos y cajas del trailer del día para un operador.
- * trailersCierre: array de registros de TrailerCierreModal
- */
-export function getPuntosTrailerWorker(trailersCierre = [], workerName) {
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
-  return trailersCierre
-    .filter((t) => t.timestamp >= hoy.getTime() && t.gruposActivos?.includes(workerName))
-    .reduce(
-      (acc, t) => ({
-        puntos: acc.puntos + (t.puntosXGrupo || 0),
-        cajas:  acc.cajas  + (t.cajasPorGrupo || 0),
-      }),
-      { puntos: 0, cajas: 0 }
-    )
-}
-
-/**
  * Genera el ranking del día para todos los operadores que participaron.
- * Incluye puntos del trailer de cierre para un ranking 100% justo.
- * trailersCierre es opcional — si no se pasa, el ranking ignora el trailer.
- *
- * Retorna array ordenado de mayor a menor pts totales (descargas + trailer):
- * [{ workerName, ptsPorMin, puntosTotales, puntosTotalesConTrailer, cajasTotales, minutos, puntosTrailer, cajasTrailer }]
+ * Retorna array ordenado de mayor a menor puntos totales:
+ * [{ workerName, ptsPorMin, puntosTotales, cajasTotales, minutosTotales, descargas }]
  */
-export function calcRankingDia(records, trailersCierre = []) {
+export function calcRankingDia(records) {
   const hoy = recordsDeHoy(records).filter((r) => r.status === 'finished')
 
-  // Recopilar todos los operadores únicos del día
-  // (incluir también los que solo aparecen en trailers)
-  const desdeRecords  = hoy.flatMap((r) => r.workers || [])
-  const desdeTrailers = trailersCierre
-    .filter((t) => { const h = new Date(); h.setHours(0,0,0,0); return t.timestamp >= h.getTime() })
-    .flatMap((t) => t.gruposActivos || [])
-  const operadores = [...new Set([...desdeRecords, ...desdeTrailers])]
+  const operadores = [...new Set(hoy.flatMap((r) => r.workers || []))]
 
   const ranking = operadores.map((name) => {
-    const res     = calcResumenWorker(hoy, name)
-    const trailer = getPuntosTrailerWorker(trailersCierre, name)
-    return {
-      workerName:               name,
-      ...res,
-      puntosTrailer:            trailer.puntos,
-      cajasTrailer:             trailer.cajas,
-      puntosTotalesConTrailer:  res.puntosTotales + trailer.puntos,
-      cajasTotalesConTrailer:   res.cajasTotales  + trailer.cajas,
-    }
+    const res = calcResumenWorker(hoy, name)
+    return { workerName: name, ...res }
   })
 
-  // Ordenar por puntos totales (descargas + trailer)
-  return ranking.sort((a, b) => b.puntosTotalesConTrailer - a.puntosTotalesConTrailer)
+  return ranking.sort((a, b) => b.puntosTotales - a.puntosTotales)
 }
 
 /**
  * Retorna la posición (1-based) de un operador en el ranking del día.
  * Si no hay datos, retorna null.
  */
-export function getPosicionRanking(records, workerName, trailersCierre = []) {
-  const ranking = calcRankingDia(records, trailersCierre)
+export function getPosicionRanking(records, workerName) {
+  const ranking = calcRankingDia(records)
   const idx = ranking.findIndex((r) => r.workerName === workerName)
   return idx >= 0 ? idx + 1 : null
 }

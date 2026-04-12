@@ -8,7 +8,7 @@ const normProd = (p) => typeof p === 'string'
   ? { id: p, nombre: p, sku: '', tipo: 'Ligero' }
   : { id: p.id || p.nombre, nombre: p.nombre, sku: p.sku || '', tipo: p.tipo || 'Ligero' }
 
-export default function NewDescarga({ naves, workers, providers, activeNaveIds, adminCred, onSave, onClose, inline }) {
+export default function NewDescarga({ naves, workers, providers, activeNaveIds, adminCred, onSave, onClose, inline, categorias = [] }) {
   const [naveId,        setNaveId]        = useState('')
   const [provider,      setProvider]      = useState('')
   const [product,       setProduct]       = useState('')
@@ -18,6 +18,7 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
   const [showQR,        setShowQR]        = useState(false)
   const [tipoCarga,     setTipoCarga]     = useState('')
   const [cajasEst,      setCajasEst]      = useState('')
+  const [categoria,     setCategoria]     = useState('')
   const [manifiesto,    setManifiesto]    = useState([]) // [{productoId, nombre, sku, tipo, cantidadEsperada}]
   const [deviceTime]                      = useState(() => Date.now())
 
@@ -57,7 +58,7 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
   const totalPersonal = [...new Set([...descargadores, ...estibadores])]
   // product puede venir del manifiesto o selección directa
   const hasProduct = product || manifiesto.length > 0
-  const canSave = naveId && provider && hasProduct && totalPersonal.length > 0 && tipoCarga
+  const canSave = naveId && provider && hasProduct && totalPersonal.length > 0 && tipoCarga && categoria
 
   const handleSave = () => {
     if (!canSave) return
@@ -76,6 +77,7 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
       tipoCarga,
       cajasEstimadas: cajasEst ? Number(cajasEst) : null,
       manifiesto:     manifiesto.length > 0 ? manifiesto : null,
+      categoria,
     })
   }
 
@@ -234,6 +236,23 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
         </div>
       </div>
 
+      {/* 7b. Categoría de producto */}
+      {categorias.length > 0 && (
+        <div>
+          <label className="block text-xs font-bold mb-2 text-[#1a3a8f] dark:text-[#8fa3b1] uppercase tracking-wide">Categoría de Producto</label>
+          <div className="flex flex-wrap gap-2">
+            {categorias.map((c) => (
+              <button key={c.id} onClick={() => setCategoria(c.nombre)}
+                className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-colors ${
+                  categoria === c.nombre ? 'bg-[#ec4899] border-[#ec4899] text-white' : 'border-[#8fa3b1]/40 text-gray-700 dark:text-gray-300'
+                }`}>
+                {c.nombre}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 8. Cajas estimadas */}
       <div>
         <label className="block text-xs font-bold mb-2 text-[#1a3a8f] dark:text-[#8fa3b1] uppercase tracking-wide">Cajas Estimadas — opcional</label>
@@ -245,7 +264,7 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
 
   const footer = (
     <>
-      {!canSave && <p className="text-xs text-[#8fa3b1] text-center mb-2">Selecciona nave, proveedor, producto, tipo de carga y al menos un operador</p>}
+      {!canSave && <p className="text-xs text-[#8fa3b1] text-center mb-2">Selecciona nave, proveedor, producto, tipo de carga, categoría y al menos un operador</p>}
       <button onClick={handleSave} disabled={!canSave}
         className="touch-target w-full rounded-xl text-white font-bold text-base py-4 disabled:opacity-40 active:scale-95 transition-transform"
         style={{ background: canSave ? 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' : '#8fa3b1' }}>

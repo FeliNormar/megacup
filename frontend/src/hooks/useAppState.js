@@ -65,6 +65,7 @@ export function useAppState() {
   const [recordsPage,  setRecordsPage]  = useState(0)
   const [recordsTotal, setRecordsTotal] = useState(0)
   const RECORDS_PAGE_SIZE = 50
+  const [categorias,   setCategorias]   = useState(() => ls.get('mc_categorias', []))
 
   const fetchRecordsPage = async (page = 0) => {
     const from = page * RECORDS_PAGE_SIZE
@@ -141,6 +142,12 @@ export function useAppState() {
         if (almacenData?.value) {
           setAlmacenCred(almacenData.value)
           ls.set('mc_almacen', almacenData.value)
+        }
+        // Cargar categorías libres
+        const { data: catData } = await supabase.from('categorias').select('*').order('nombre')
+        if (catData?.length > 0) {
+          setCategorias(catData)
+          ls.set('mc_categorias', catData)
         }
       } catch (err) {
         console.error('Error cargando datos de Supabase:', err)
@@ -265,32 +272,24 @@ export function useAppState() {
   const [trailersCierre, setTrailersCierre] = useState(() => ls.get('mc_trailers_cierre', []))
   useEffect(() => { ls.set('mc_trailers_cierre', trailersCierre) }, [trailersCierre])
 
-  const registrarTrailerCierre = async (data) => {
-    const entry = { id: uid(), ...data, creadoEn: Date.now() }
-    setTrailersCierre((prev) => [entry, ...prev])
+  const addCategoria = async (nombre) => {
+    const trimmed = nombre.trim()
+    if (!trimmed) return
+    const nueva = { id: `cat-${Date.now()}`, nombre: trimmed }
+    setCategorias((prev) => [...prev, nueva].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+    ls.set('mc_categorias', [...categorias, nueva])
     try {
-      await supabase.from('trailers_cierre').insert([{
-        id:              entry.id,
-        cajas_trailer:   entry.cajasTrailer,
-        tipo_carga:      entry.tipoCarga,
-        grupos_activos:  entry.gruposActivos,
-        cajas_x_grupo:   entry.cajasPorGrupo,
-        puntos_x_grupo:  entry.puntosXGrupo,
-        timestamp:       entry.timestamp,
-        creado_en:       new Date(entry.creadoEn).toISOString(),
-      }])
+      await supabase.from('categorias').insert([nueva])
     } catch (err) {
-      // La tabla puede no existir aún — se guarda en local de todas formas
-      console.warn('trailers_cierre no disponible en Supabase aún:', err.message)
+      console.warn('Error guardando categoría:', err.message)
     }
-    toast('✅ Trailer registrado y puntos distribuidos')
   }
 
   const importRecord = async (data) => {
     const cajasXDesc = data.cajasReales && data.descargadores?.length > 0
-      ? Math.round(data.cajasReales / data.descargadores.length) : null
+      ? data.cajasReales / data.descargadores.length : null
     const cajasXEstib = data.cajasReales && data.estibadores?.length > 0
-      ? Math.round(data.cajasReales / data.estibadores.length) : null
+      ? data.cajasReales / data.estibadores.length : null
     const record = {
       id:                  uid(),
       naveId:              data.naveId,
@@ -336,6 +335,7 @@ export function useAppState() {
       status:           'active',
       tipo_carga:       assignment.tipoCarga || null,
       cajas_estimadas:  assignment.cajasEstimadas || null,
+      categoria:        assignment.categoria || null,
     }
     const { error } = await supabase.from('assignments').insert([row])
     if (error) { console.error('Error guardando descarga:', error); toast('❌ Error al guardar la descarga. Intenta de nuevo.') }
@@ -362,9 +362,9 @@ export function useAppState() {
     const descargadores = a.descargadores || []
     const estibadores   = a.estibadores   || []
     const cajasXDescarg = cajasReales && descargadores.length > 0
-      ? Math.round(cajasReales / descargadores.length) : null
+      ? cajasReales / descargadores.length : null
     const cajasXEstib   = cajasReales && estibadores.length > 0
-      ? Math.round(cajasReales / estibadores.length) : null
+      ? cajasReales / estibadores.length : null
 
     const record = {
       ...a,
@@ -398,6 +398,7 @@ export function useAppState() {
       cajas_reales:        cajasReales || null,
       cajas_x_descargador: cajasXDescarg || null,
       cajas_x_estibador:   cajasXEstib || null,
+      categoria:           record.categoria || null,
     }
     const { error } = await supabase.from('records').insert([row])
     if (error) { console.error('Error guardando record:', error); toast('❌ Error al finalizar la descarga. Intenta de nuevo.') }
@@ -481,11 +482,11 @@ export function useAppState() {
 
     if (cajasReales) {
       if (descargadores.length > 0 && !changes.cajasXDescargador && !changes.cajas_x_descargador) {
-        changes.cajasXDescargador    = Math.round(cajasReales / descargadores.length)
+        changes.cajasXDescargador    = cajasReales / descargadores.length
         changes.cajas_x_descargador  = changes.cajasXDescargador
       }
       if (estibadores.length > 0 && !changes.cajasXEstibador && !changes.cajas_x_estibador) {
-        changes.cajasXEstibador   = Math.round(cajasReales / estibadores.length)
+        changes.cajasXEstibador   = cajasReales / estibadores.length
         changes.cajas_x_estibador = changes.cajasXEstibador
       }
     }
@@ -557,7 +558,8 @@ export function useAppState() {
     updateAdmin,
     importRecord,
     trailersCierre,
-    registrarTrailerCierre,
+    categorias,
+    addCategoria,
     frase, setFrase,
 
     // Derivados

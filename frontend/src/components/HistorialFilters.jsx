@@ -28,12 +28,13 @@ function highlight(text, query) {
   )
 }
 
-export default function HistorialFilters({ records = [], naves = [], workers = [], providers = [], isAdmin, isAlmacenista, onDelete, onEditCajas }) {
+export default function HistorialFilters({ records = [], naves = [], workers = [], providers = [], isAdmin, isAlmacenista, onDelete, onEditCajas, categorias = [] }) {
   const [desde,      setDesde]      = useState('')
   const [hasta,      setHasta]      = useState('')
   const [filtWorker, setFiltWorker] = useState('')
   const [filtProv,   setFiltProv]   = useState('')
   const [filtNave,   setFiltNave]   = useState('')
+  const [filtCat,    setFiltCat]    = useState('')
   const [search,     setSearch]     = useState('')
   const [searchVal,  setSearchVal]  = useState('')
   const [page,       setPage]       = useState(1)
@@ -47,7 +48,7 @@ export default function HistorialFilters({ records = [], naves = [], workers = [
 
   const clearFilters = () => {
     setDesde(''); setHasta(''); setFiltWorker(''); setFiltProv(''); setFiltNave('')
-    setSearch(''); setSearchVal(''); setPage(1)
+    setFiltCat(''); setSearch(''); setSearchVal(''); setPage(1)
   }
 
   const activeFilters = { desde, hasta, operador: filtWorker, proveedor: filtProv, nave: filtNave, search }
@@ -69,6 +70,7 @@ export default function HistorialFilters({ records = [], naves = [], workers = [
     if (filtWorker) res = res.filter((r) => r.workers?.includes(filtWorker))
     if (filtProv)   res = res.filter((r) => r.provider === filtProv)
     if (filtNave)   res = res.filter((r) => r.naveId === filtNave || r.naveName === filtNave)
+    if (filtCat)    res = res.filter((r) => r.categoria === filtCat)
 
     // Búsqueda en cliente
     if (search) {
@@ -86,7 +88,7 @@ export default function HistorialFilters({ records = [], naves = [], workers = [
   const paginated = filtered.slice(0, page * PAGE_SIZE)
   const hasMore   = paginated.length < filtered.length
 
-  const hasFilters = desde || hasta || filtWorker || filtProv || filtNave || search
+  const hasFilters = desde || hasta || filtWorker || filtProv || filtNave || filtCat || search
 
   return (
     <div className="space-y-3">
@@ -130,6 +132,11 @@ export default function HistorialFilters({ records = [], naves = [], workers = [
         <FilterSelect value={filtNave} onChange={(v) => { setFiltNave(v); setPage(1) }} placeholder="Nave">
           {naves.map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
         </FilterSelect>
+        {categorias.length > 0 && (
+          <FilterSelect value={filtCat} onChange={(v) => { setFiltCat(v); setPage(1) }} placeholder="Categoría">
+            {categorias.map((c) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+          </FilterSelect>
+        )}
 
         {hasFilters && (
           <button onClick={clearFilters}

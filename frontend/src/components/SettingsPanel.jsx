@@ -298,7 +298,7 @@ function ProviderEditor({ providers, onChange }) {
 }
 
 // ── Panel principal con acordeones ────────────────────────────────────────────
-export default function SettingsPanel({ workers, naves, providers, adminCred, onUpdateWorkers, onUpdateNaves, onUpdateProviders, onUpdateAdmin, onImportRecord, frase, setFrase }) {
+export default function SettingsPanel({ workers, naves, providers, adminCred, onUpdateWorkers, onUpdateNaves, onUpdateProviders, onUpdateAdmin, onImportRecord, frase, setFrase, categorias = [], onAddCategoria }) {
   const [openId, setOpenId] = useState(null)
   const [newUser, setNewUser] = useState('')
   const [newPin, setNewPin] = useState('')
@@ -329,6 +329,10 @@ export default function SettingsPanel({ workers, naves, providers, adminCred, on
 
       <Accordion id="providers" openId={openId} setOpenId={setOpenId} icon={Package} title="Proveedores y Productos" badge={providers.length}>
         <ProviderEditor providers={providers} onChange={onUpdateProviders} />
+      </Accordion>
+
+      <Accordion id="categorias" openId={openId} setOpenId={setOpenId} icon={Package} title="Categorías de Producto" badge={categorias.length}>
+        <CategoriasEditor categorias={categorias} onAdd={onAddCategoria} />
       </Accordion>
 
       <Accordion id="admin" openId={openId} setOpenId={setOpenId} icon={ShieldCheck} title="Credenciales Admin">
@@ -506,6 +510,56 @@ function ImportRecord({ workers, naves, providers, onSave }) {
         className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-2.5 flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
         <ClipboardList size={15} /> {saving ? 'Guardando...' : 'Guardar Registro Histórico'}
       </button>
+    </div>
+  )
+}
+
+// ── Categorías de producto ────────────────────────────────────────────────────
+function CategoriasEditor({ categorias = [], onAdd }) {
+  const [input, setInput] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const handleAdd = async () => {
+    const v = input.trim()
+    if (!v || !onAdd) return
+    setSaving(true)
+    await onAdd(v)
+    setInput('')
+    setSaving(false)
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-400">
+        Las categorías aparecen al crear una nueva descarga para clasificar el tipo de producto.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {categorias.map((c) => (
+          <span key={c.id}
+            className="px-3 py-1.5 rounded-full text-xs font-semibold bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-700 text-pink-700 dark:text-pink-300">
+            {c.nombre}
+          </span>
+        ))}
+        {categorias.length === 0 && (
+          <p className="text-xs text-slate-400 italic">Sin categorías aún</p>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          placeholder="Nueva categoría (ej. Vasos, Unicel...)"
+          className="flex-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+        />
+        <button
+          onClick={handleAdd}
+          disabled={!input.trim() || saving}
+          className="px-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
+        >
+          <Plus size={16} />
+        </button>
+      </div>
     </div>
   )
 }

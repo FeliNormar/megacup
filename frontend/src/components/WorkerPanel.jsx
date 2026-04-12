@@ -57,7 +57,7 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
     if (esDesc  && r.cajasXDescargador) return acc + r.cajasXDescargador
     if (esEstib && r.cajasXEstibador)   return acc + r.cajasXEstibador
     if (!esDesc && !esEstib && r.cajasReales && r.workers?.length > 0) {
-      return acc + Math.round(r.cajasReales / r.workers.length)
+      return acc + (r.cajasReales / r.workers.length)
     }
     return acc
   }, 0)
@@ -222,7 +222,7 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
                 const cajas   = esDesc  && r.cajasXDescargador ? r.cajasXDescargador
                               : esEstib && r.cajasXEstibador   ? r.cajasXEstibador
                               : (!esDesc && !esEstib && r.cajasReales && r.workers?.length > 0)
-                                ? Math.round(r.cajasReales / r.workers.length)
+                                ? (r.cajasReales / r.workers.length)
                               : null
 
                 return (
