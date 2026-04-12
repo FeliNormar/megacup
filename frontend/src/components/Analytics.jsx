@@ -9,6 +9,7 @@ import WeeklyAnalytics        from './WeeklyAnalytics'
 import MonthlyAnalytics       from './MonthlyAnalytics'
 import HistorialFilters       from './HistorialFilters'
 import ProductividadAnalytics from './ProductividadAnalytics'
+import InformeProductividad   from './InformeProductividad'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
@@ -16,6 +17,7 @@ const PROVIDERS = ['Pactiv', 'Arero', 'Maver', 'Dart', 'Desola', 'Biodeli']
 
 export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab, recordsPage, recordsTotal, recordsPageSize, fetchRecordsPage, trailersCierre = [] }) {
   const [view, setView] = useState(defaultTab === 'history' ? 'history' : 'weekly')
+  const [showInforme, setShowInforme] = useState(false)
   const printRef = useRef(null)
 
   const now   = new Date()
@@ -161,6 +163,19 @@ export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, 
           dark={dark}
           workers={workers}
         />
+      )}
+
+      {view === 'productividad' && (
+        <button
+          onClick={() => setShowInforme(true)}
+          className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold border-2 border-[#1a3a8f]/40 text-[#1a3a8f] dark:text-[#8fa3b1] dark:border-[#8fa3b1]/30"
+        >
+          📋 Ver informe explicativo para el jefe de almacén
+        </button>
+      )}
+
+      {showInforme && (
+        <InformeProductividad onClose={() => setShowInforme(false)} />
       )}
 
       {view === 'history' && (
