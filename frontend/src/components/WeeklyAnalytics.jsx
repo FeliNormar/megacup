@@ -2,19 +2,12 @@ import React, { useMemo, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
-import { startOfWeek, endOfWeek, format, subWeeks } from 'date-fns'
+import { startOfWeek, endOfWeek, format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { esDiaOperativo, diasActivosOrdenados, labelDia } from '../config/operacion'
+import { esDiaOperativo, diasActivosOrdenados } from '../config/operacion'
+import { getCajasWorker, PESO_FACTORES } from '../utils/productividad'
 
 const COLORES = { 1: '#1a3a8f', 2: '#2563c4', 3: '#0891b2', 4: '#0d9488', 5: '#16a34a', 6: '#f97316' }
-
-function formatDuration(seconds) {
-  if (!seconds || seconds < 0) return '0 min'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  if (h > 0) return `${h}h ${m}min`
-  return `${m} min`
-}
 
 function getWeekLabel(date) {
   const start = startOfWeek(date, { weekStartsOn: 1 })
@@ -40,15 +33,17 @@ export default function WeeklyAnalytics({ records = [], dark }) {
       const weekStart = startOfWeek(new Date(r.startTime), { weekStartsOn: 1 })
       const key = weekStart.toISOString()
       if (!map[key]) {
-        map[key] = { weekStart, label: getWeekLabel(weekStart), totalSeg: 0, numDescargas: 0, dias: {} }
-        dias.forEach((d) => { map[key].dias[d.dayIndex] = { label: d.label, segundos: 0, descargas: 0 } })
+        map[key] = { weekStart, label: getWeekLabel(weekStart), totalCajas: 0, totalPuntos: 0, numDescargas: 0, dias: {} }
+        dias.forEach((d) => { map[key].dias[d.dayIndex] = { label: d.label, cajas: 0, descargas: 0 } })
       }
-      const seg = (r.endTime - r.startTime) / 1000
-      const dayIdx = new Date(r.startTime).getDay()
-      map[key].totalSeg += seg
+      const cajasReales = r.cajas_reales || r.cajasReales || 0
+      const factor      = PESO_FACTORES[r.tipo_carga || r.tipoCarga] ?? 1.0
+      const dayIdx      = new Date(r.startTime).getDay()
+      map[key].totalCajas   += cajasReales
+      map[key].totalPuntos  += cajasReales * factor
       map[key].numDescargas += 1
       if (map[key].dias[dayIdx]) {
-        map[key].dias[dayIdx].segundos  += seg
+        map[key].dias[dayIdx].cajas     += cajasReales
         map[key].dias[dayIdx].descargas += 1
       }
     })
@@ -64,19 +59,17 @@ export default function WeeklyAnalytics({ records = [], dark }) {
     { dayIndex: 6, label: 'Sáb' },
   ], [])
 
-  // Datos para la gráfica — semanas en orden cronológico, días en orden Lun→Sáb
+  // Gráfica — cajas por semana y día
   const chartData = useMemo(() =>
     semanas.map((s) => {
-      // Construir objeto con orden garantizado usando prefijo para evitar reordenamiento
       const row = { semana: s.label }
       diasOrdenados.forEach((d) => {
-        row[d.label] = parseFloat((s.dias[d.dayIndex]?.segundos / 3600 || 0).toFixed(2))
+        row[d.label] = s.dias[d.dayIndex]?.cajas || 0
       })
       return row
     }).reverse()
   , [semanas, diasOrdenados])
 
-  // Semana seleccionada para ranking
   const semanaActual = semanas[selectedWeekOffset] || null
 
   // Métricas semana actual vs anterior
@@ -84,21 +77,21 @@ export default function WeeklyAnalytics({ records = [], dark }) {
     const cur  = semanas[0]
     const prev = semanas[1]
     if (!cur) return null
-    const curH  = cur.totalSeg  / 3600
-    const prevH = prev ? prev.totalSeg / 3600 : null
-    const delta = prevH !== null ? curH - prevH : null
     const diasActivos = dias.filter((d) => cur.dias[d.dayIndex]?.descargas > 0).length
+    const promCajas   = cur.numDescargas > 0 ? Math.round(cur.totalCajas / cur.numDescargas) : 0
+    const deltaPuntos = prev ? Math.round(cur.totalPuntos - prev.totalPuntos) : null
     return {
-      horas:        formatDuration(cur.totalSeg),
+      totalCajas:   cur.totalCajas,
+      totalPuntos:  Math.round(cur.totalPuntos),
+      promCajas,
+      deltaPuntos,
       descargas:    cur.numDescargas,
-      promedio:     cur.numDescargas > 0 ? formatDuration(cur.totalSeg / cur.numDescargas) : '—',
-      delta,
       diasActivos,
       totalDias:    dias.length,
     }
   }, [semanas])
 
-  // Ranking de operadores para semana seleccionada
+  // Ranking semanal por puntos normalizados
   const ranking = useMemo(() => {
     if (!semanaActual) return []
     const weekStart = semanaActual.weekStart
@@ -107,21 +100,28 @@ export default function WeeklyAnalytics({ records = [], dark }) {
       const d = new Date(r.startTime)
       return d >= weekStart && d <= weekEnd
     })
-    const map = {}
+    const workerMap = {}
     enSemana.forEach((r) => {
-      const seg = (r.endTime - r.startTime) / 1000
-      const dayIdx = new Date(r.startTime).getDay()
-      ;(r.workers || []).forEach((w) => {
-        if (!map[w]) map[w] = { name: w, totalSeg: 0, descargas: 0, incidencias: 0, diasSet: new Set() }
-        map[w].totalSeg   += seg
-        map[w].descargas  += 1
-        map[w].diasSet.add(dayIdx)
-        if (r.status === 'incident') map[w].incidencias += 1
+      const allWorkers = [...new Set([...(r.descargadores ?? []), ...(r.estibadores ?? []), ...(r.workers ?? [])])]
+      allWorkers.forEach((name) => {
+        if (!workerMap[name]) workerMap[name] = { name, puntos: 0, cajas: 0, descargas: 0, minutos: 0 }
+        const cajas        = getCajasWorker(r, name)
+        const factor       = PESO_FACTORES[r.tipo_carga || r.tipoCarga] ?? 1.0
+        const minutos      = (r.endTime - r.startTime) / 60000
+        workerMap[name].puntos    += cajas * factor
+        workerMap[name].cajas     += cajas
+        workerMap[name].descargas += 1
+        workerMap[name].minutos   += minutos
       })
     })
-    return Object.values(map)
-      .map((w) => ({ ...w, diasTrabajados: w.diasSet.size }))
-      .sort((a, b) => b.totalSeg - a.totalSeg)
+    return Object.values(workerMap)
+      .map((w) => ({
+        ...w,
+        puntos:      Math.round(w.puntos),
+        cajas:       Math.round(w.cajas),
+        cajasXHora:  w.minutos > 0 ? Math.round((w.cajas / w.minutos) * 60) : 0,
+      }))
+      .sort((a, b) => b.puntos - a.puntos)
   }, [semanaActual, operativos])
 
   if (semanas.length === 0) {
@@ -137,36 +137,36 @@ export default function WeeklyAnalytics({ records = [], dark }) {
       {/* Tarjetas de métricas */}
       {metrics && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {/* Tarjeta principal destacada */}
           <div className="col-span-2 sm:col-span-1 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-4 shadow text-white">
-            <p className="text-xs text-indigo-200 mb-1">Horas esta semana</p>
-            <p className="font-black text-2xl">{metrics.horas}</p>
+            <p className="text-xs text-indigo-200 mb-1">Puntos esta semana</p>
+            <p className="font-black text-2xl">{metrics.totalPuntos.toLocaleString()}</p>
+            <p className="text-xs text-indigo-200 mt-1">pts normalizados</p>
           </div>
-          <MetricCard label="Descargas"         value={metrics.descargas} />
-          <MetricCard label="Promedio/descarga" value={metrics.promedio} />
+          <MetricCard label="Cajas totales"       value={metrics.totalCajas.toLocaleString()} />
+          <MetricCard label="Prom. cajas/descarga" value={metrics.promCajas} />
           <MetricCard
             label="vs semana anterior"
-            value={metrics.delta !== null
-              ? `${metrics.delta >= 0 ? '↑' : '↓'} ${formatDuration(Math.abs(metrics.delta * 3600))}`
+            value={metrics.deltaPuntos !== null
+              ? `${metrics.deltaPuntos >= 0 ? '↑' : '↓'} ${Math.abs(metrics.deltaPuntos)} pts`
               : '—'}
-            color={metrics.delta !== null ? (metrics.delta >= 0 ? 'text-red-500' : 'text-green-500') : ''}
+            color={metrics.deltaPuntos !== null ? (metrics.deltaPuntos >= 0 ? 'text-green-500' : 'text-red-500') : ''}
           />
-          <MetricCard label="Días activos" value={`${metrics.diasActivos} de ${metrics.totalDias} días`} />
+          <MetricCard label="Descargas"   value={metrics.descargas} />
+          <MetricCard label="Días activos" value={`${metrics.diasActivos} de ${metrics.totalDias}`} />
         </div>
       )}
 
-      {/* Gráfica semanal */}
+      {/* Gráfica semanal — cajas por día */}
       <div className="bg-white dark:bg-[#162050] rounded-2xl p-4 shadow border border-[#8fa3b1]/20">
-        <p className="font-bold text-sm mb-3">Horas por semana y día operativo</p>
+        <p className="font-bold text-sm mb-3">Cajas por semana y día operativo</p>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#374151' : '#e5e7eb'} />
             <XAxis dataKey="semana" tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} />
-            <YAxis tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} unit="h" />
+            <YAxis tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} />
             <Tooltip
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null
-                // Forzar orden Lun→Sáb en el tooltip
                 const ordered = diasOrdenados.map((d) => {
                   const entry = payload.find((p) => p.dataKey === d.label)
                   return entry ? { ...entry, name: d.label } : { name: d.label, value: 0, color: COLORES[d.dayIndex] }
@@ -176,7 +176,7 @@ export default function WeeklyAnalytics({ records = [], dark }) {
                     <p style={{ fontWeight: 'bold', marginBottom: 4 }}>{label}</p>
                     {ordered.map((e) => (
                       <p key={e.name} style={{ color: e.color, margin: '2px 0' }}>
-                        {e.name} : {e.value === 0 ? 'Sin actividad' : `${e.value}h`}
+                        {e.name}: {e.value === 0 ? 'Sin actividad' : `${e.value} cajas`}
                       </p>
                     ))}
                   </div>
@@ -200,22 +200,21 @@ export default function WeeklyAnalytics({ records = [], dark }) {
             ))}
           </BarChart>
         </ResponsiveContainer>
-        {/* Subtotales */}
         <div className="mt-2 space-y-1">
           {semanas.slice(0, 4).map((s) => (
             <p key={s.label} className="text-xs text-[#8fa3b1]">
               {s.label}: <span className="font-semibold text-slate-700 dark:text-white">
-                {formatDuration(s.totalSeg)} · {s.numDescargas} descargas
+                {s.totalCajas.toLocaleString()} cajas · {Math.round(s.totalPuntos).toLocaleString()} pts · {s.numDescargas} descargas
               </span>
             </p>
           ))}
         </div>
       </div>
 
-      {/* Ranking semanal */}
+      {/* Ranking semanal por puntos */}
       <div className="bg-white dark:bg-[#162050] rounded-2xl p-4 shadow border border-[#8fa3b1]/20">
         <div className="flex items-center justify-between mb-3">
-          <p className="font-bold text-sm">Ranking semanal</p>
+          <p className="font-bold text-sm">🏆 Ranking semanal</p>
           <select
             value={selectedWeekOffset}
             onChange={(e) => setSelectedWeekOffset(Number(e.target.value))}
@@ -228,7 +227,7 @@ export default function WeeklyAnalytics({ records = [], dark }) {
         </div>
         {ranking.length === 0
           ? <p className="text-[#8fa3b1] text-sm text-center py-3">Sin datos esta semana</p>
-          : <div className="space-y-3">
+          : <div className="space-y-2">
               {ranking.map((w, i) => {
                 const medals = ['🥇', '🥈', '🥉']
                 return (
@@ -236,13 +235,12 @@ export default function WeeklyAnalytics({ records = [], dark }) {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-lg">{medals[i] || `#${i+1}`}</span>
                       <span className="font-bold text-sm flex-1">{w.name}</span>
-                      <span className="text-sm font-bold text-[#1a3a8f] dark:text-[#8fa3b1]">{formatDuration(w.totalSeg)}</span>
+                      <span className="font-black text-base text-[#ec4899]">{w.puntos.toLocaleString()} pts</span>
                     </div>
-                    <div className="flex gap-3 text-xs text-[#8fa3b1]">
-                      <span>{w.descargas} descargas</span>
-                      <span>Prom: {formatDuration(w.totalSeg / w.descargas)}</span>
-                      {w.incidencias > 0 && <span className="text-red-400">{w.incidencias} incid.</span>}
-                      <span>{w.diasTrabajados} de {dias.length} días</span>
+                    <div className="flex gap-3 text-xs text-[#8fa3b1] flex-wrap">
+                      <span>📦 {w.cajas.toLocaleString()} cajas</span>
+                      <span>⚡ {w.cajasXHora} cajas/h</span>
+                      <span>🔄 {w.descargas} descargas</span>
                     </div>
                   </div>
                 )
