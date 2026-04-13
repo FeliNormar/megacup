@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Usuario — MEGA CUP</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; background: #fff; font-size: 13px; line-height: 1.6; }
+
+  /* Portada */
+  .cover { background: linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%); color: white; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 60px 40px; page-break-after: always; }
+  .cover h1 { font-size: 42px; font-weight: 900; letter-spacing: -1px; margin-bottom: 12px; }
+  .cover h2 { font-size: 22px; font-weight: 300; opacity: 0.85; margin-bottom: 40px; }
+  .cover .badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 50px; padding: 8px 24px; font-size: 13px; margin-bottom: 60px; }
+  .cover .meta { opacity: 0.6; font-size: 12px; }
+
+  /* Layout */
+  .page { max-width: 800px; margin: 0 auto; padding: 50px 60px; }
+  @media print { .page { padding: 30px 40px; } .cover { min-height: auto; padding: 80px 40px; } }
+
+  /* Índice */
+  .toc { page-break-after: always; }
+  .toc h2 { font-size: 28px; color: #1a3a8f; border-bottom: 3px solid #1a3a8f; padding-bottom: 10px; margin-bottom: 30px; }
+  .toc-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dotted #ddd; }
+  .toc-item span { color: #1a3a8f; font-weight: 600; }
+  .toc-section { font-size: 15px; font-weight: 700; color: #1a3a8f; margin-top: 20px; margin-bottom: 6px; }
+  .toc-sub { padding-left: 20px; font-size: 13px; color: #444; }
+
+  /* Secciones */
+  .section { margin-bottom: 50px; }
+  .section-header { background: linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%); color: white; padding: 16px 24px; border-radius: 12px; margin-bottom: 24px; }
+  .section-header h2 { font-size: 20px; font-weight: 800; }
+  .section-header p { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+
+  h3 { font-size: 16px; color: #1a3a8f; margin: 24px 0 10px; font-weight: 700; }
+  h4 { font-size: 14px; color: #2563c4; margin: 16px 0 8px; font-weight: 600; }
+  p { margin-bottom: 10px; color: #333; }
+
+  /* Cajas de info */
+  .info-box { background: #f0f4ff; border-left: 4px solid #1a3a8f; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0; }
+  .warning-box { background: #fff8e1; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0; }
+  .success-box { background: #f0fdf4; border-left: 4px solid #16a34a; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0; }
+  .tip-box { background: #fdf4ff; border-left: 4px solid #9333ea; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0; }
+
+  /* Pasos numerados */
+  .steps { counter-reset: step; }
+  .step { display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start; }
+  .step-num { background: #1a3a8f; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0; margin-top: 2px; }
+  .step-content { flex: 1; }
+  .step-content strong { display: block; color: #1a3a8f; margin-bottom: 4px; }
+
+  /* Tabla */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 12px; }
+  th { background: #1a3a8f; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; }
+  tr:nth-child(even) td { background: #f8faff; }
+  tr:hover td { background: #eef2ff; }
+
+  /* Fórmulas */
+  .formula { background: #1a1a2e; color: #7dd3fc; font-family: 'Courier New', monospace; padding: 16px 20px; border-radius: 8px; margin: 12px 0; font-size: 13px; line-height: 1.8; }
+  .formula .comment { color: #6b7280; }
+
+  /* Roles */
+  .role-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-right: 6px; }
+  .role-admin { background: #dbeafe; color: #1d4ed8; }
+  .role-worker { background: #dcfce7; color: #15803d; }
+  .role-almacen { background: #fef3c7; color: #b45309; }
+
+  /* Divisor de página */
+  .page-break { page-break-before: always; padding-top: 20px; }
+
+  /* Footer */
+  .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 60px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+
+  /* Chips de función */
+  .chip { display: inline-block; background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin: 2px; }
+</style>
+</head>
+<body>
+
+<!-- PORTADA -->
+<div class="cover">
+  <div class="badge">Sistema de Control de Descargas</div>
+  <h1>MEGA CUP</h1>
+  <h2>Manual de Usuario</h2>
+  <p style="font-size:15px; opacity:0.7; max-width:400px; margin-bottom:40px;">
+    Guía completa para operadores, almacenistas y administradores del sistema de gestión de descargas en bodega.
+  </p>
+  <div class="meta">
+    <p>Versión 2.0 &nbsp;·&nbsp; Abril 2026</p>
+    <p style="margin-top:6px;">megacup.vercel.app</p>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- ÍNDICE -->
+<div class="toc">
+  <h2>Contenido</h2>
+  <div class="toc-section">1. Introducción al sistema</div>
+  <div class="toc-item toc-sub"><span>¿Qué es MEGA CUP?</span></div>
+  <div class="toc-item toc-sub"><span>Roles de usuario</span></div>
+  <div class="toc-item toc-sub"><span>Cómo acceder</span></div>
+
+  <div class="toc-section">2. Para el Operador</div>
+  <div class="toc-item toc-sub"><span>Ver mis descargas asignadas</span></div>
+  <div class="toc-item toc-sub"><span>Registrar cajas durante la descarga</span></div>
+  <div class="toc-item toc-sub"><span>Mi panel de productividad</span></div>
+  <div class="toc-item toc-sub"><span>Mi historial y ranking</span></div>
+
+  <div class="toc-section">3. Para el Almacenista</div>
+  <div class="toc-item toc-sub"><span>Ver descargas activas</span></div>
+  <div class="toc-item toc-sub"><span>Consultar historial y analítica</span></div>
+
+  <div class="toc-section">4. Para el Administrador</div>
+  <div class="toc-item toc-sub"><span>Crear una nueva descarga</span></div>
+  <div class="toc-item toc-sub"><span>Gestionar descargas activas</span></div>
+  <div class="toc-item toc-sub"><span>Actualizar cajas asignadas en tiempo real</span></div>
+  <div class="toc-item toc-sub"><span>Finalizar una descarga</span></div>
+  <div class="toc-item toc-sub"><span>Registrar incidencias</span></div>
+  <div class="toc-item toc-sub"><span>Analítica semanal y mensual</span></div>
+  <div class="toc-item toc-sub"><span>Historial y edición de registros</span></div>
+  <div class="toc-item toc-sub"><span>Configuración del sistema</span></div>
+
+  <div class="toc-section">5. Cómo se calcula la productividad</div>
+  <div class="toc-item toc-sub"><span>Cajas por persona</span></div>
+  <div class="toc-item toc-sub"><span>Puntos por descarga</span></div>
+  <div class="toc-item toc-sub"><span>Productividad en tiempo real</span></div>
+  <div class="toc-item toc-sub"><span>Ranking del día, semanal y mensual</span></div>
+  <div class="toc-item toc-sub"><span>Tiempo estimado para terminar</span></div>
+  <div class="toc-item toc-sub"><span>Notas técnicas importantes</span></div>
+</div>
+
+<!-- SECCIÓN 1: INTRODUCCIÓN -->
+<div class="section">
+  <div class="section-header">
+    <h2>1. Introducción al sistema</h2>
+    <p>Qué es MEGA CUP y cómo funciona</p>
+  </div>
+
+  <h3>¿Qué es MEGA CUP?</h3>
+  <p>MEGA CUP es un sistema web para gestionar y controlar las descargas de trailers en bodega. Permite registrar en tiempo real qué se está descargando, quién lo hace, cuántas cajas se manejan y qué tan productivo es cada equipo.</p>
+  <p>El sistema funciona desde cualquier dispositivo con navegador web (celular, tablet o computadora) y no requiere instalación.</p>
+  <p><strong>Dirección de acceso:</strong> <a href="https://megacup.vercel.app" style="color:#1a3a8f;">megacup.vercel.app</a></p>
+
+  <h3>Roles de usuario</h3>
+  <p>El sistema tiene tres tipos de usuario, cada uno con acceso a diferentes funciones:</p>
+  <table>
+    <tr><th>Rol</th><th>Quién lo usa</th><th>Qué puede hacer</th></tr>
+    <tr>
+      <td><span class="role-badge role-admin">Administrador</span></td>
+      <td>Jefe de turno / Supervisor</td>
+      <td>Todo: crear descargas, asignar personal, finalizar, ver analítica, configurar el sistema</td>
+    </tr>
+    <tr>
+      <td><span class="role-badge role-almacen">Almacenista</span></td>
+      <td>Personal de almacén</td>
+      <td>Ver descargas activas, consultar historial y analítica (sin poder crear ni finalizar)</td>
+    </tr>
+    <tr>
+      <td><span class="role-badge role-worker">Operador</span></td>
+      <td>Descargadores / Estibadores</td>
+      <td>Ver sus descargas asignadas, registrar cajas en tiempo real, ver su productividad e historial</td>
+    </tr>
+  </table>
+
+  <h3>Cómo acceder</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <strong>Abrir el navegador</strong>
+        Ingresa a <strong>megacup.vercel.app</strong> desde cualquier dispositivo.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <strong>Seleccionar tu nombre</strong>
+        En la pantalla de inicio verás la lista de operadores. Toca tu nombre.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <strong>Ingresar tu contraseña</strong>
+        Escribe tu contraseña y presiona "Entrar". El administrador te la asignó al registrarte.
+      </div>
+    </div>
+  </div>
+  <div class="info-box">
+    <strong>Para administrador y almacenista:</strong> En la pantalla de login hay un botón separado "Admin" o "Almacén" donde ingresan con su usuario y contraseña propios.
+  </div>
+</div>
+
+<!-- SECCIÓN 2: OPERADOR -->
+<div class="section page-break">
+  <div class="section-header">
+    <h2>2. Para el Operador</h2>
+    <p>Todo lo que necesitas saber para usar el sistema durante tu turno</p>
+  </div>
+
+  <h3>Ver mis descargas asignadas</h3>
+  <p>Al iniciar sesión, verás directamente las descargas que te han asignado. Cada tarjeta muestra:</p>
+  <ul style="margin-left:20px; margin-bottom:12px;">
+    <li><strong>Nave / Bodega</strong> donde está el trailer</li>
+    <li><strong>Proveedor y producto</strong> que se está descargando</li>
+    <li><strong>Tu rol</strong>: Descargador, Estibador o ambos</li>
+    <li><strong>Cronómetro</strong> que indica cuánto tiempo lleva la descarga</li>
+    <li><strong>Barra de progreso</strong> de cajas (si el admin la actualiza)</li>
+    <li><strong>Panel de productividad en vivo</strong> con tu ritmo actual</li>
+  </ul>
+  <div class="info-box">
+    El cronómetro cambia de color: <strong style="color:#22c55e;">verde</strong> = buen ritmo, <strong style="color:#eab308;">amarillo</strong> = atención, <strong style="color:#ef4444;">rojo parpadeante</strong> = se está tardando más de lo esperado.
+  </div>
+
+  <h3>Registrar cajas durante la descarga</h3>
+  <p>Si la descarga tiene un manifiesto de productos, verás la sección <strong>"Registra lo que vas bajando"</strong> dentro de tu tarjeta. Aquí puedes ir anotando cuántas cajas de cada producto has bajado.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <strong>Localiza el producto</strong>
+        Verás una tarjeta por cada tipo de producto en el trailer.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <strong>Escribe la cantidad</strong>
+        En el campo "¿Cuántas cajas?" ingresa el número de cajas que acabas de bajar.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <strong>Presiona "Registrar"</strong>
+        El sistema guarda tu captura y la suma al total. Puedes registrar varias veces durante la descarga.
+      </div>
+    </div>
+  </div>
+  <div class="success-box">
+    <strong>Tiempo real:</strong> Tus compañeros en la misma descarga ven tus capturas al instante. Aparecen como badges verdes con el número que registraste.
+  </div>
+
+  <h3>Mi panel de productividad en vivo</h3>
+  <p>Mientras la descarga está activa, el sistema calcula automáticamente tu ritmo de trabajo y lo muestra en tres métricas:</p>
+  <table>
+    <tr><th>Métrica</th><th>Qué significa</th></tr>
+    <tr><td><strong>Cajas/hora total</strong></td><td>Cuántas cajas está bajando todo el equipo por hora al ritmo actual</td></tr>
+    <tr><td><strong>Cajas/hora por persona</strong></td><td>Tu parte proporcional del trabajo por hora</td></tr>
+    <tr><td><strong>Pts/hora por persona</strong></td><td>Tus puntos de productividad por hora (considera el peso de la carga)</td></tr>
+  </table>
+  <p>También verás el <strong>tiempo estimado para terminar</strong> basado en tu ritmo actual.</p>
+  <div class="tip-box">
+    Este panel se actualiza cada 10 segundos automáticamente. No necesitas hacer nada.
+  </div>
+
+  <h3>Mi historial y ranking</h3>
+  <p>En la pestaña <strong>"Historial"</strong> de la barra inferior encontrarás:</p>
+  <ul style="margin-left:20px; margin-bottom:12px;">
+    <li><strong>Panel de productividad del día:</strong> tus puntos totales, pts/min y cajas del día</li>
+    <li><strong>Tu posición en el ranking</strong> del día comparado con los demás equipos (🥇🥈🥉)</li>
+    <li><strong>Desglose por descarga:</strong> cuántos puntos generaste en cada una</li>
+    <li><strong>Historial completo</strong> de todas tus descargas anteriores agrupadas por día</li>
+  </ul>
+  <div class="info-box">
+    El ranking compara equipos de forma justa: una carga pesada vale más puntos que una ligera, así que no importa qué tipo de trailer te tocó — el sistema reconoce el esfuerzo real.
+  </div>
+</div>
+
+<!-- SECCIÓN 3: ALMACENISTA -->
+<div class="section page-break">
+  <div class="section-header">
+    <h2>3. Para el Almacenista</h2>
+    <p>Consulta y seguimiento de operaciones</p>
+  </div>
+
+  <h3>Ver descargas activas</h3>
+  <p>Al iniciar sesión como almacenista, verás todas las descargas que están en curso en ese momento. Puedes ver el estado de cada nave, quién está trabajando y cuánto tiempo llevan.</p>
+  <p>No puedes crear ni finalizar descargas — esa función es exclusiva del administrador.</p>
+
+  <h3>Consultar historial y analítica</h3>
+  <p>Tienes acceso completo a las pestañas de <strong>Analítica</strong> e <strong>Historial</strong>:</p>
+  <ul style="margin-left:20px; margin-bottom:12px;">
+    <li><strong>Semanal:</strong> cajas por día de la semana, ranking de operadores por puntos</li>
+    <li><strong>Mensual:</strong> resumen por semana del mes, ranking mensual</li>
+    <li><strong>Productividad:</strong> ranking histórico normalizado por tipo de carga</li>
+    <li><strong>Historial:</strong> búsqueda y filtrado de todas las descargas pasadas</li>
+  </ul>
+  <div class="info-box">
+    Puedes exportar el historial a <strong>Excel</strong> o <strong>PDF</strong> usando los botones en la parte superior del historial.
+  </div>
+</div>
+
+<!-- SECCIÓN 4: ADMINISTRADOR -->
+<div class="section page-break">
+  <div class="section-header">
+    <h2>4. Para el Administrador</h2>
+    <p>Control total del sistema de descargas</p>
+  </div>
+
+  <h3>Crear una nueva descarga</h3>
+  <p>Presiona el botón <strong>"Nueva Descarga"</strong> en el dashboard o el botón <strong>"+"</strong> en la barra inferior.</p>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-content"><strong>Selecciona la nave / bodega</strong> donde está el trailer.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><strong>Elige el proveedor</strong> del trailer.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><strong>Selecciona los productos</strong> del manifiesto y define las cantidades esperadas.</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-content"><strong>Asigna los descargadores y estibadores</strong> que trabajarán en esta descarga.</div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-content"><strong>Selecciona el tipo de carga:</strong> Ligero, Semi pesado o Pesado. Esto afecta el cálculo de productividad.</div></div>
+    <div class="step"><div class="step-num">6</div><div class="step-content"><strong>Ingresa las cajas estimadas</strong> (opcional pero recomendado para ver el progreso).</div></div>
+    <div class="step"><div class="step-num">7</div><div class="step-content"><strong>Presiona "Iniciar Descarga".</strong> El cronómetro arranca automáticamente.</div></div>
+  </div>
+
+  <h3>Gestionar descargas activas</h3>
+  <p>Cada descarga activa aparece como una tarjeta en el dashboard. Desde ahí puedes:</p>
+  <table>
+    <tr><th>Acción</th><th>Cómo hacerlo</th></tr>
+    <tr><td>Editar datos</td><td>Botón de lápiz ✏️ en la esquina de la tarjeta</td></tr>
+    <tr><td>Eliminar descarga</td><td>Botón de basura 🗑️ (pide confirmación)</td></tr>
+    <tr><td>Notificar por WhatsApp</td><td>Botones verdes con el nombre del operador</td></tr>
+    <tr><td>Actualizar cajas asignadas</td><td>Campo numérico en la barra de progreso</td></tr>
+    <tr><td>Registrar incidencia</td><td>Botón rojo "Incidencia"</td></tr>
+    <tr><td>Finalizar descarga</td><td>Botón rosa "Finalizar"</td></tr>
+  </table>
+
+  <h3>Actualizar cajas asignadas en tiempo real</h3>
+  <p>Durante la descarga, puedes ir actualizando el número de cajas que ya se bajaron. Esto alimenta la barra de progreso y el panel de productividad en vivo de los operadores.</p>
+  <div class="info-box">
+    El campo de cajas asignadas está en la barra de progreso de cada tarjeta. Solo el administrador puede editarlo. Los operadores lo ven pero no pueden modificarlo.
+  </div>
+
+  <h3>Finalizar una descarga</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-content"><strong>Presiona "Finalizar"</strong> en la tarjeta de la descarga.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><strong>Confirma</strong> presionando "Confirmar fin".</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><strong>Ingresa las cajas reales</strong> descargadas. Si no las ingresas, el sistema usa las cajas asignadas como base.</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-content">Revisa la <strong>comparativa del manifiesto</strong> (esperado vs capturado por producto). Si hay faltantes, el sistema te avisa.</div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-content"><strong>Presiona "Finalizar"</strong> para cerrar la descarga y guardarla en el historial.</div></div>
+  </div>
+  <div class="warning-box">
+    Si hay productos con faltantes en el manifiesto, el sistema muestra una alerta en rojo. Verifica antes de finalizar.
+  </div>
+</div>
+
+  <h3>Analítica semanal y mensual</h3>
+  <p>En la pestaña <strong>"Analítica"</strong> encontrarás cuatro vistas:</p>
+  <table>
+    <tr><th>Vista</th><th>Qué muestra</th></tr>
+    <tr><td><strong>Semanal</strong></td><td>Cajas por día de la semana, ranking de operadores por puntos, comparativa vs semana anterior</td></tr>
+    <tr><td><strong>Mensual</strong></td><td>Cajas por semana del mes, ranking mensual de operadores</td></tr>
+    <tr><td><strong>🏆 Productividad</strong></td><td>Ranking histórico normalizado, gráfica de tendencia por operador, factores de peso aplicados</td></tr>
+    <tr><td><strong>Historial</strong></td><td>Todas las descargas con filtros por fecha, operador, proveedor y nave</td></tr>
+  </table>
+
+  <h3>Historial y edición de registros</h3>
+  <p>En el historial puedes buscar cualquier descarga pasada y editarla si es necesario. Esto es útil para corregir cajas reales o asignar roles que no se registraron correctamente.</p>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-content">Usa los filtros de fecha, operador, proveedor o nave para encontrar el registro.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content">Presiona <strong>"Editar"</strong> en el registro que quieres modificar.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content">Modifica cajas estimadas, cajas reales, tipo de carga, descargadores, estibadores u horas.</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-content">Presiona <strong>"Guardar"</strong>. Los puntos y el ranking se recalculan automáticamente.</div></div>
+  </div>
+  <div class="tip-box">
+    Los registros sin cajas asignadas muestran el aviso <strong>"⚠ Sin cajas — editar para calcular pts"</strong>. Edítalos para que aparezcan en las gráficas de productividad.
+  </div>
+
+  <h3>Configuración del sistema</h3>
+  <p>Accede a la configuración desde el botón de engranaje ⚙️ en la esquina inferior derecha. Desde ahí puedes:</p>
+  <table>
+    <tr><th>Sección</th><th>Qué puedes hacer</th></tr>
+    <tr><td>Naves / Bodegas</td><td>Agregar o eliminar naves disponibles</td></tr>
+    <tr><td>Operadores</td><td>Agregar, eliminar o cambiar contraseñas de operadores</td></tr>
+    <tr><td>Proveedores y Productos</td><td>Gestionar catálogo de proveedores y sus productos con SKU y tipo de carga</td></tr>
+    <tr><td>Categorías de Producto</td><td>Agregar categorías libres para clasificar descargas</td></tr>
+    <tr><td><strong>Puntos por Tipo de Carga</strong></td><td>Cambiar los factores de productividad (Ligero, Semi pesado, Pesado)</td></tr>
+    <tr><td>Credenciales Admin</td><td>Cambiar usuario y contraseña del administrador</td></tr>
+    <tr><td>Agregar Registro Histórico</td><td>Ingresar descargas pasadas manualmente para incluirlas en las métricas</td></tr>
+  </table>
+</div>
+
+<!-- SECCIÓN 5: CÓMO SE CALCULA LA PRODUCTIVIDAD -->
+<div class="section page-break">
+  <div class="section-header">
+    <h2>5. Cómo se calcula la productividad</h2>
+    <p>Explicación detallada del sistema de métricas normalizadas</p>
+  </div>
+
+  <div class="info-box">
+    <strong>¿Por qué un sistema de puntos?</strong> No es justo comparar equipos solo por tiempo o cantidad de cajas si cada uno descargó un tipo de carga diferente. Descargar 4,000 vasos pesados requiere mucho más esfuerzo que 1,000 charolas ligeras. El sistema de puntos normaliza esto para que la comparación sea siempre justa.
+  </div>
+
+  <h3>5.1 Cajas por persona</h3>
+  <p>Cuando se finaliza una descarga, las cajas reales se dividen equitativamente entre <strong>todos los trabajadores</strong> que participaron, sin importar si eran descargadores o estibadores.</p>
+  <div class="formula">
+cajas_por_persona = cajas_reales ÷ total_trabajadores
+<span class="comment">
+donde total_trabajadores = descargadores + estibadores (sin duplicados)</span>
+  </div>
+  <p><strong>Ejemplo:</strong></p>
+  <table>
+    <tr><th>Dato</th><th>Valor</th></tr>
+    <tr><td>Cajas reales descargadas</td><td>300</td></tr>
+    <tr><td>Descargadores</td><td>Celso, Eugenio (2 personas)</td></tr>
+    <tr><td>Estibadores</td><td>Celso, Pablo (2 personas)</td></tr>
+    <tr><td>Pool combinado (sin duplicar a Celso)</td><td>Celso, Eugenio, Pablo = 3 personas</td></tr>
+    <tr><td><strong>Cajas por persona</strong></td><td><strong>300 ÷ 3 = 100 cajas</strong></td></tr>
+  </table>
+
+  <h3>5.2 Puntos por descarga</h3>
+  <p>Cada caja vale más o menos puntos según la categoría de peso de la carga. El administrador puede ajustar estos factores desde Configuración.</p>
+  <table>
+    <tr><th>Categoría</th><th>Factor por defecto</th><th>Ejemplo de productos</th></tr>
+    <tr><td>Ligero</td><td style="color:#1d4ed8; font-weight:700;">×1.0</td><td>Charolas, tapas, bolsas</td></tr>
+    <tr><td>Semi pesado</td><td style="color:#b45309; font-weight:700;">×2.5</td><td>Vasos medianos, contenedores</td></tr>
+    <tr><td>Pesado</td><td style="color:#dc2626; font-weight:700;">×4.0</td><td>Vasos grandes, cajas pesadas</td></tr>
+  </table>
+  <div class="formula">
+puntos = cajas_por_persona × factor_tipo_carga
+  </div>
+  <p><strong>Ejemplo comparativo — mismo tiempo, diferente carga:</strong></p>
+  <table>
+    <tr><th>Equipo</th><th>Cajas</th><th>Categoría</th><th>Factor</th><th>Puntos</th></tr>
+    <tr><td>Equipo A</td><td>1,000</td><td>Ligero</td><td>×1.0</td><td>1,000</td></tr>
+    <tr><td>Equipo B</td><td>3,000</td><td>Semi pesado</td><td>×2.5</td><td>7,500</td></tr>
+    <tr><td>Equipo C</td><td>4,000</td><td>Pesado</td><td>×4.0</td><td><strong>16,000</strong></td></tr>
+  </table>
+  <div class="success-box">
+    Aunque los tres equipos trabajaron el mismo tiempo, el Equipo C generó más puntos porque su carga requería mayor esfuerzo físico. El sistema reconoce y premia ese esfuerzo.
+  </div>
+
+  <h3>5.3 Productividad en tiempo real</h3>
+  <p>Durante una descarga activa, el sistema calcula el ritmo de trabajo usando las <strong>cajas asignadas</strong> (que el admin actualiza) y el tiempo transcurrido.</p>
+  <div class="formula">
+minutos_transcurridos    = (ahora - hora_inicio) ÷ 60,000
+
+cajas_por_hora_total     = (cajas_asignadas ÷ minutos) × 60
+cajas_por_hora_x_persona = cajas_por_hora_total ÷ total_personas
+puntos_por_hora_x_persona = cajas_por_hora_x_persona × factor
+  </div>
+  <p><strong>Ejemplo:</strong></p>
+  <table>
+    <tr><th>Dato</th><th>Valor</th></tr>
+    <tr><td>Cajas asignadas hasta ahora</td><td>150</td></tr>
+    <tr><td>Minutos transcurridos</td><td>30 min</td></tr>
+    <tr><td>Total personas</td><td>3</td></tr>
+    <tr><td>Categoría</td><td>Semi pesado (×2.5)</td></tr>
+    <tr><td>Cajas/hora total</td><td>(150 ÷ 30) × 60 = <strong>300 cajas/hora</strong></td></tr>
+    <tr><td>Cajas/hora por persona</td><td>300 ÷ 3 = <strong>100 cajas/hora</strong></td></tr>
+    <tr><td>Puntos/hora por persona</td><td>100 × 2.5 = <strong>250 pts/hora</strong></td></tr>
+  </table>
+  <div class="tip-box">El panel se actualiza automáticamente cada 10 segundos.</div>
+</div>
+
+  <h3>5.4 Ranking del día</h3>
+  <p>El ranking acumula los puntos de todas las descargas terminadas del día (desde las 00:00), más las descargas activas en tiempo real.</p>
+  <div class="formula">
+puntos_totales_operador = Σ (cajas_por_persona × factor) de cada descarga del día
+  </div>
+  <p><strong>Ejemplo — Celso en un día con 2 descargas:</strong></p>
+  <table>
+    <tr><th>Descarga</th><th>Cajas</th><th>Categoría</th><th>Factor</th><th>Puntos</th></tr>
+    <tr><td>Nave 17 — mañana</td><td>120</td><td>Pesado</td><td>×4.0</td><td>480</td></tr>
+    <tr><td>Nave 1 — tarde</td><td>80</td><td>Semi pesado</td><td>×2.5</td><td>200</td></tr>
+    <tr><td colspan="4"><strong>Total del día</strong></td><td><strong>680 pts</strong></td></tr>
+  </table>
+  <p>El ranking ordena a todos los operadores de mayor a menor puntos totales del día.</p>
+
+  <h3>5.5 Ranking semanal y mensual</h3>
+  <p>Misma lógica que el ranking del día, pero filtrando registros por la semana o mes correspondiente usando la hora de inicio de cada descarga.</p>
+  <div class="formula">
+cajas_por_hora_historico = cajas_totales ÷ (minutos_totales ÷ 60)
+  </div>
+  <p><strong>Ejemplo:</strong></p>
+  <table>
+    <tr><th>Dato</th><th>Valor</th></tr>
+    <tr><td>Descargas en la semana</td><td>5</td></tr>
+    <tr><td>Total cajas</td><td>600</td></tr>
+    <tr><td>Total minutos trabajados</td><td>240 min (4 horas)</td></tr>
+    <tr><td>Cajas/hora</td><td>600 ÷ 4 = <strong>150 cajas/hora</strong></td></tr>
+  </table>
+
+  <h3>5.6 Tiempo estimado para terminar</h3>
+  <p>Cuando hay cajas estimadas definidas, el sistema proyecta cuánto tiempo falta basándose en el ritmo actual.</p>
+  <div class="formula">
+minutos_estimados_total = (cajas_estimadas ÷ cajas_asignadas) × minutos_transcurridos
+minutos_restantes       = minutos_estimados_total - minutos_transcurridos
+  </div>
+  <p><strong>Ejemplo:</strong></p>
+  <table>
+    <tr><th>Dato</th><th>Valor</th></tr>
+    <tr><td>Cajas estimadas</td><td>400</td></tr>
+    <tr><td>Cajas asignadas hasta ahora</td><td>100</td></tr>
+    <tr><td>Minutos transcurridos</td><td>20 min</td></tr>
+    <tr><td>Tiempo estimado total</td><td>(400 ÷ 100) × 20 = 80 min</td></tr>
+    <tr><td><strong>Tiempo restante</strong></td><td><strong>80 - 20 = 60 min</strong></td></tr>
+  </table>
+
+  <h3>5.7 Notas técnicas importantes</h3>
+
+  <h4>Divisiones exactas</h4>
+  <p>Todas las divisiones de cajas se guardan con decimales exactos para que la suma siempre iguale las cajas reales. El redondeo solo ocurre al mostrar los valores en pantalla.</p>
+
+  <h4>Comparación de nombres — sin distinción de mayúsculas</h4>
+  <p>Los nombres de operadores se comparan sin distinguir mayúsculas para evitar duplicados por inconsistencias de escritura. "Celso Jose", "celso jose" y "CELSO JOSE" son el mismo operador.</p>
+
+  <h4>Registros sin cajas reales</h4>
+  <p>Si un registro histórico no tiene cajas reales asignadas, el sistema usa las cajas estimadas como aproximación para calcular puntos. Esto permite que registros antiguos aparezcan en las gráficas.</p>
+  <div class="warning-box">
+    Para que los registros históricos aparezcan correctamente en el ranking, es importante editarlos desde el Historial y asignarles cajas reales, tipo de carga, descargadores y estibadores.
+  </div>
+
+  <h4>Resumen de fórmulas</h4>
+  <table>
+    <tr><th>Métrica</th><th>Fórmula</th></tr>
+    <tr><td>Cajas por persona</td><td>cajas_reales ÷ (descargadores + estibadores)</td></tr>
+    <tr><td>Puntos por descarga</td><td>cajas_por_persona × factor_tipo_carga</td></tr>
+    <tr><td>Cajas/hora total</td><td>(cajas_asignadas ÷ minutos) × 60</td></tr>
+    <tr><td>Cajas/hora por persona</td><td>cajas_hora_total ÷ total_personas</td></tr>
+    <tr><td>Puntos/hora por persona</td><td>cajas_hora_x_persona × factor</td></tr>
+    <tr><td>Tiempo estimado total</td><td>(cajas_estimadas ÷ cajas_asignadas) × minutos_transcurridos</td></tr>
+    <tr><td>Productividad histórica</td><td>puntos_totales ÷ minutos_totales</td></tr>
+  </table>
+</div>
+
+<div class="footer">
+  <p>MEGA CUP — Sistema de Control de Descargas &nbsp;·&nbsp; megacup.vercel.app</p>
+  <p style="margin-top:4px;">Manual de Usuario v2.0 &nbsp;·&nbsp; Abril 2026</p>
+</div>
+
+</div><!-- .page -->
+</body>
+</html>
