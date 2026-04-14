@@ -421,22 +421,39 @@ function ImportRecord({ workers, naves, providers, onSave }) {
 
   const handleSave = async () => {
     if (!naveId || !provider || !product || !startVal || !endVal) return
+    // Validar que las fechas sean válidas (iOS Safari puede devolver NaN)
+    const startTime = new Date(startVal).getTime()
+    const endTime   = new Date(endVal).getTime()
+    if (isNaN(startTime) || isNaN(endTime)) {
+      alert('Las fechas ingresadas no son válidas. Verifica el formato.')
+      return
+    }
+    if (endTime <= startTime) {
+      alert('La hora de fin debe ser posterior a la hora de inicio.')
+      return
+    }
     setSaving(true)
-    const ok = await onSave({
-      naveId, naveName: selNave?.name || naveId, provider, product, po, tipoCarga,
-      startTime: new Date(startVal).getTime(), endTime: new Date(endVal).getTime(),
-      cajasEstimadas: cajasEst ? Number(cajasEst) : null, cajasReales: cajasReal ? Number(cajasReal) : null,
-      workers: [...new Set([...descarg, ...estib])], descargadores: descarg, estibadores: estib,
-    })
-    setSaving(false)
-    if (ok) { setPo(''); setTipoCarga(''); setCajasEst(''); setCajasReal(''); setDescarg([]); setEstib([]) }
+    try {
+      const ok = await onSave({
+        naveId, naveName: selNave?.name || naveId, provider, product, po, tipoCarga,
+        startTime, endTime,
+        cajasEstimadas: cajasEst ? Number(cajasEst) : null, cajasReales: cajasReal ? Number(cajasReal) : null,
+        workers: [...new Set([...descarg, ...estib])], descargadores: descarg, estibadores: estib,
+      })
+      if (ok) { setPo(''); setTipoCarga(''); setCajasEst(''); setCajasReal(''); setDescarg([]); setEstib([]) }
+    } catch (err) {
+      console.error('Error guardando registro histórico:', err)
+      alert('Error al guardar. Revisa tu conexión e intenta de nuevo.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-500 dark:text-slate-400">Ingresa descargas pasadas para incluirlas en las métricas.</p>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className={labelCls}>Nave</label>
           <select value={naveId} onChange={e => setNaveId(e.target.value)} className={inputCls}>
@@ -461,10 +478,14 @@ function ImportRecord({ workers, naves, providers, onSave }) {
         <div>
           <label className={labelCls}>Producto</label>
           <select value={product} onChange={e => setProduct(e.target.value)} className={inputCls}>
-            {(selProv?.products || []).map(pr => <option key={pr} value={pr}>{pr}</option>)}
+            {(selProv?.products || []).map(pr => {
+              const nombre = typeof pr === 'string' ? pr : pr.nombre
+              const key    = typeof pr === 'string' ? pr : (pr.id || pr.nombre)
+              return <option key={key} value={nombre}>{nombre}</option>
+            })}
           </select>
         </div>
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <label className={labelCls}>PO (opcional)</label>
           <input type="text" value={po} onChange={e => setPo(e.target.value)} placeholder="PO-123" className={inputCls} />
         </div>
@@ -487,7 +508,7 @@ function ImportRecord({ workers, naves, providers, onSave }) {
       </div>
 
       {workers.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>📥 Descargadores</label>
             <div className="flex flex-wrap gap-1">

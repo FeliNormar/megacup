@@ -58,7 +58,7 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
   const totalPersonal = [...new Set([...descargadores, ...estibadores])]
   // product puede venir del manifiesto o selección directa
   const hasProduct = product || manifiesto.length > 0
-  const canSave = naveId && provider && hasProduct && totalPersonal.length > 0 && tipoCarga && categoria
+  const canSave = naveId && provider && hasProduct && totalPersonal.length > 0 && tipoCarga && (categorias.length === 0 || categoria)
 
   const handleSave = () => {
     if (!canSave) return
@@ -264,7 +264,7 @@ export default function NewDescarga({ naves, workers, providers, activeNaveIds, 
 
   const footer = (
     <>
-      {!canSave && <p className="text-xs text-[#8fa3b1] text-center mb-2">Selecciona nave, proveedor, producto, tipo de carga, categoría y al menos un operador</p>}
+      {!canSave && <p className="text-xs text-[#8fa3b1] text-center mb-2">Selecciona nave, proveedor, producto, tipo de carga{categorias.length > 0 ? ', categoría' : ''} y al menos un operador</p>}
       <button onClick={handleSave} disabled={!canSave}
         className="touch-target w-full rounded-xl text-white font-bold text-base py-4 disabled:opacity-40 active:scale-95 transition-transform"
         style={{ background: canSave ? 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' : '#8fa3b1' }}>
