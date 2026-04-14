@@ -32,55 +32,88 @@ function WorkerAvatars({ names = [] }) {
 }
 
 // Barra de progreso de cajas asignadas vs estimadas en tiempo real
-function ProgressBar({ cajasEstimadas, cajasAsignadas, isAdmin, onUpdateCajas }) {
-  const [inputVal, setInputVal] = useState(cajasAsignadas ?? '')
+// Escucha capturas en Realtime para actualizar sin recargar
+function ProgressBar({ cajasEstimadas, cajasAsignadas, isAdmin, onUpdateCajas, assignmentId }) {
+  const [inputVal,      setInputVal]      = useState(cajasAsignadas ?? '')
+  const [totalCapturas, setTotalCapturas] = useState(null) // null = no cargado aún
 
-  // Sincronizar si cambia desde fuera (realtime)
+  // Cargar total de capturas al montar y suscribirse a nuevas
+  useEffect(() => {
+    if (!assignmentId) return
+
+    // Carga inicial
+    supabase
+      .from('capturas')
+      .select('cantidad')
+      .eq('assignment_id', assignmentId)
+      .then(({ data }) => {
+        if (data) setTotalCapturas(data.reduce((acc, c) => acc + (c.cantidad || 0), 0))
+      })
+
+    // Realtime — escuchar nuevas capturas de esta descarga
+    const channel = supabase
+      .channel(`progress-capturas-${assignmentId}`)
+      .on('postgres_changes', {
+        event:  'INSERT',
+        schema: 'public',
+        table:  'capturas',
+      }, (payload) => {
+        if (payload.new?.assignment_id !== assignmentId) return
+        setTotalCapturas((prev) => (prev ?? 0) + (payload.new.cantidad || 0))
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [assignmentId])
+
+  // Sincronizar inputVal si cajas_asignadas cambia desde fuera (admin en otro dispositivo)
   useEffect(() => { setInputVal(cajasAsignadas ?? '') }, [cajasAsignadas])
 
-  if (!cajasEstimadas) {
+  // Usar capturas si están disponibles, si no usar cajas_asignadas del admin
+  const asignadas  = totalCapturas !== null ? totalCapturas : (cajasAsignadas ?? 0)
+  const estimadas  = cajasEstimadas ?? 0
+  const pct        = estimadas > 0 ? Math.min(100, Math.round((asignadas / estimadas) * 100)) : 0
+  const pendientes = estimadas > 0 ? Math.max(0, estimadas - asignadas) : null
+  const color      = pct >= 100 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-400' : 'bg-indigo-500'
+
+  if (!estimadas) {
     if (!isAdmin) return null
     return (
       <div className="mt-2">
         <p className="text-xs text-[#8fa3b1] mb-1">Sin estimado de cajas</p>
-        {isAdmin && (
-          <input
-            type="number" min="0"
-            value={inputVal}
-            onChange={(e) => {
-              setInputVal(e.target.value)
-              const n = parseInt(e.target.value)
-              if (!isNaN(n) && n >= 0) onUpdateCajas(n)
-            }}
-            placeholder="Cajas asignadas"
-            className="w-full rounded-xl border border-[#8fa3b1]/30 bg-transparent px-3 py-1.5 text-xs outline-none focus:border-[#1a3a8f]"
-          />
-        )}
+        <input
+          type="number" min="0"
+          value={inputVal}
+          onChange={(e) => {
+            setInputVal(e.target.value)
+            const n = parseInt(e.target.value)
+            if (!isNaN(n) && n >= 0) onUpdateCajas(n)
+          }}
+          placeholder="Cajas asignadas"
+          className="w-full rounded-xl border border-[#8fa3b1]/30 bg-transparent px-3 py-1.5 text-xs outline-none focus:border-[#1a3a8f]"
+        />
       </div>
     )
   }
 
-  const asignadas = cajasAsignadas ?? 0
-  const pct       = Math.min(100, Math.round((asignadas / cajasEstimadas) * 100))
-  const pendientes = Math.max(0, cajasEstimadas - asignadas)
-  const color     = pct >= 100 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-400' : 'bg-indigo-500'
-
   return (
     <div className="mt-2 space-y-1.5">
       <div className="flex justify-between text-xs text-[#8fa3b1]">
-        <span>Asignadas / Estimadas</span>
-        <span className="font-semibold">{asignadas} / {cajasEstimadas} ({pct}%)</span>
+        <span>Bajadas / Estimadas</span>
+        <span className="font-semibold">{asignadas} / {estimadas} ({pct}%)</span>
       </div>
       <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
         <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-xs text-[#8fa3b1]">
-          Pendientes: <span className="font-bold text-slate-700 dark:text-white">{pendientes}</span>
-        </span>
+        {pendientes !== null && (
+          <span className="text-xs text-[#8fa3b1]">
+            Pendientes: <span className="font-bold text-slate-700 dark:text-white">{pendientes}</span>
+          </span>
+        )}
         {isAdmin && (
           <input
-            type="number" min="0" max={cajasEstimadas}
+            type="number" min="0" max={estimadas}
             value={inputVal}
             onChange={(e) => {
               setInputVal(e.target.value)
@@ -232,6 +265,7 @@ export default function NaveCard({ nave, assignment, isWorker, isAdmin, provider
           cajasAsignadas={assignment.cajas_asignadas}
           isAdmin={isAdmin}
           onUpdateCajas={(n) => onUpdateCajasAsignadas?.(assignment.id, n)}
+          assignmentId={assignment.id}
         />
 
         {/* Productividad en vivo */}
