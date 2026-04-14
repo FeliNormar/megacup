@@ -518,11 +518,11 @@ function ImportRecord({ workers, naves, providers, onSave }) {
         </div>
         <div>
           <label className={labelCls}>Cajas estimadas</label>
-          <input type="number" value={cajasEst} onChange={e => setCajasEst(e.target.value)} placeholder="0" className={inputCls} />
+          <input type="text" inputMode="numeric" pattern="[0-9]*" value={cajasEst} onChange={e => setCajasEst(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Ej: 1200" className={inputCls} />
         </div>
         <div>
           <label className={labelCls}>Cajas reales</label>
-          <input type="number" value={cajasReal} onChange={e => setCajasReal(e.target.value)} placeholder="0" className={inputCls} />
+          <input type="text" inputMode="numeric" pattern="[0-9]*" value={cajasReal} onChange={e => setCajasReal(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Ej: 1081" className={inputCls} />
         </div>
       </div>
 
