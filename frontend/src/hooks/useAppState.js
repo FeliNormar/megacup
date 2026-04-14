@@ -282,7 +282,6 @@ export function useAppState() {
   useEffect(() => { ls.set('mc_trailers_cierre', trailersCierre) }, [trailersCierre])
 
   const updatePuntosXCaja = async (tipo, valor) => {
-    console.log('updatePuntosXCaja called', { tipo, valor, configPuntosActual: configPuntos })
     const key = tipo === 'Ligero' ? 'ligero' : tipo === 'Semi pesado' ? 'semi_pesado' : 'pesado'
     const updated = { ...configPuntos, [key]: Number(valor) }
     setConfigPuntos(updated)
@@ -484,13 +483,21 @@ export function useAppState() {
     if (!a) return
     setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
     clearTimer(a.id)
-    await supabase.from('assignments').update({ deleted_at: new Date().toISOString() }).eq('id', a.id)
+    try {
+      await supabase.from('assignments').update({ deleted_at: new Date().toISOString() }).eq('id', a.id)
+    } catch (err) {
+      console.error('Error eliminando descarga:', err)
+    }
     insertLog(a.id, session?.workerName || 'admin', 'eliminada')
   }
 
   const softDeleteRecord = async (id) => {
     setRecords((prev) => prev.filter((r) => r.id !== id))
-    await supabase.from('records').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    try {
+      await supabase.from('records').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    } catch (err) {
+      console.error('Error eliminando record:', err)
+    }
     insertLog(id, session?.workerName || 'admin', 'eliminada')
   }
 
@@ -499,11 +506,14 @@ export function useAppState() {
     if (!a) return
     const updated = { ...a, ...changes }
     setAssignments((prev) => ({ ...prev, [naveId]: updated }))
-    // Mapear a snake_case para Supabase
     const supabaseChanges = { ...changes }
     if (changes.tipoCarga !== undefined)      supabaseChanges.tipo_carga      = changes.tipoCarga
     if (changes.cajasEstimadas !== undefined) supabaseChanges.cajas_estimadas = changes.cajasEstimadas
-    await supabase.from('assignments').update(supabaseChanges).eq('id', a.id)
+    try {
+      await supabase.from('assignments').update(supabaseChanges).eq('id', a.id)
+    } catch (err) {
+      console.error('Error editando descarga:', err)
+    }
     insertLog(a.id, session?.workerName || 'admin', 'editada', JSON.stringify(changes))
   }
 
@@ -570,9 +580,7 @@ export function useAppState() {
     return active.filter((a) => a.workers?.includes(session.workerName))
   }, [assignments, session])
 
-  console.log('useAppState return', { configPuntos, updatePuntosXCaja: typeof updatePuntosXCaja })
-  return {
-    // Estado
+  return {    // Estado
     dark, setDark,
     session, setSession, logout,    workers,   setWorkers,
     naves,     setNaves,

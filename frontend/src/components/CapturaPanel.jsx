@@ -64,12 +64,19 @@ export default function CapturaPanel({ assignment, workerName }) {
       cantidad:      cant,
       operador:      workerName,
     }
-    const { error } = await supabase.from('capturas').insert([row])
-    if (!error) {
-      setCapturas(prev => [...prev, row])
-      setCantidad(prev => ({ ...prev, [prod.producto_id]: '' }))
+    try {
+      const { error } = await supabase.from('capturas').insert([row])
+      if (!error) {
+        setCapturas(prev => [...prev, row])
+        setCantidad(prev => ({ ...prev, [prod.producto_id]: '' }))
+      } else {
+        console.error('Error registrando captura:', error)
+      }
+    } catch (err) {
+      console.error('Error registrando captura:', err)
+    } finally {
+      setSaving(prev => ({ ...prev, [prod.producto_id]: false }))
     }
-    setSaving(prev => ({ ...prev, [prod.producto_id]: false }))
   }
 
   if (loading) {

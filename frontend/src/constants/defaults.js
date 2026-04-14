@@ -1,6 +1,7 @@
 /**
  * Valores por defecto de la aplicación.
  * Se usan cuando no hay datos guardados en localStorage.
+ * ⚠️  CAMBIAR ANTES DE PRODUCCIÓN — estas credenciales son solo para primer arranque.
  */
 
 export const DEFAULT_WORKERS = [
@@ -26,14 +27,17 @@ export const DEFAULT_PROVIDERS = [
   { id: 'p6', name: 'Biodeli', products: ['Empaques biodegradables']              },
 ]
 
+// ⚠️  CAMBIAR ANTES DE PRODUCCIÓN
+// Estos PINs son el fallback si Supabase no tiene credenciales configuradas.
+// Configura las credenciales reales en Supabase > config table.
 export const DEFAULT_ADMIN = {
   username: 'admin',
-  pin:      'changeme',
+  pin:      '847291',  // PIN temporal — cambiar en Configuración al primer inicio
 }
 
 export const DEFAULT_ALMACENISTA = {
   username: 'almacen',
-  pin:      '1234',
+  pin:      '563084',  // PIN temporal — cambiar en Configuración al primer inicio
 }
 
 export const DEFAULT_FRASE = '"El único modo de hacer un gran trabajo es amar lo que haces." – Steve Jobs'

@@ -303,8 +303,6 @@ export default function SettingsPanel({ workers, naves, providers, adminCred, on
   const [newUser, setNewUser] = useState('')
   const [newPin, setNewPin] = useState('')
   const [msg, setMsg] = useState('')
-
-  console.log('SettingsPanel props', { configPuntos, onUpdatePuntosXCaja: typeof onUpdatePuntosXCaja })
   const [fraseEdit, setFraseEdit] = useState(frase || '')
 
   const saveAdmin = () => {
@@ -616,9 +614,7 @@ function PuntosEditor({ configPuntos, onUpdate }) {
     const num = parseFloat(valor)
     if (isNaN(num) || num <= 0) return
     const tipo = keyToLabel[key]
-    console.log('SAVING', tipo, num, 'onUpdate:', typeof onUpdate)
     if (onUpdate) await onUpdate(tipo, num)
-    else console.error('onUpdate is undefined!')
   }
 
   return (
