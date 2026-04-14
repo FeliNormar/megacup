@@ -319,18 +319,17 @@ export function useAppState() {
   const importRecord = async (data) => {
     const descargadores   = data.descargadores || []
     const estibadores     = data.estibadores   || []
-    const todosLosWorkers = [...new Set([...descargadores, ...estibadores])]
-    // Redondear a entero — columnas son INTEGER en Supabase
-    const cajasReales = data.cajasReales ? Math.round(Number(data.cajasReales)) : null
-    const cajasEst    = data.cajasEstimadas ? Math.round(Number(data.cajasEstimadas)) : null
-    const cajasXDesc  = cajasReales && todosLosWorkers.length > 0 ? Math.round(cajasReales / todosLosWorkers.length) : null
-    const cajasXEstib = cajasReales && todosLosWorkers.length > 0 ? Math.round(cajasReales / todosLosWorkers.length) : null
+    // Enteros estrictos — columnas INTEGER en Supabase no aceptan floats
+    const cajasReales = Math.round(Number(data.cajasReales))   || 0
+    const cajasEst    = Math.round(Number(data.cajasEstimadas)) || 0
+    const cajasXDesc  = descargadores.length > 0 ? Math.round(cajasReales / descargadores.length) : 0
+    const cajasXEstib = estibadores.length   > 0 ? Math.round(cajasReales / estibadores.length)   : 0
     const record = {
       id:                  uid(),
       naveId:              data.naveId,
       naveName:            data.naveName,
       provider:            data.provider,
-      product:             data.product,
+      product:             typeof data.product === 'string' ? data.product : (data.product?.nombre || ''),
       po:                  data.po || null,
       workers:             data.workers || [],
       descargadores,
@@ -339,10 +338,10 @@ export function useAppState() {
       endTime:             data.endTime,
       status:              'finished',
       tipo_carga:          data.tipoCarga || null,
-      cajas_estimadas:     cajasEst,
-      cajas_reales:        cajasReales,
-      cajas_x_descargador: cajasXDesc,
-      cajas_x_estibador:   cajasXEstib,
+      cajas_estimadas:     cajasEst    || null,
+      cajas_reales:        cajasReales || null,
+      cajas_x_descargador: cajasXDesc  || null,
+      cajas_x_estibador:   cajasXEstib || null,
     }
     console.log('importRecord PAYLOAD:', JSON.stringify(record))
     const { data: insertData, error } = await supabase.from('records').insert([record]).select()
@@ -355,7 +354,6 @@ export function useAppState() {
       toast(`❌ Error al guardar: ${error.message || error.code || JSON.stringify(error)}`)
       return false
     }
-    // Usar los datos reales que devuelve Supabase si están disponibles
     const savedRecord = insertData?.[0] || record
     setRecords((prev) => [savedRecord, ...prev])
     insertLog(record.id, session?.workerName || 'admin', 'creada', 'importado manualmente')
