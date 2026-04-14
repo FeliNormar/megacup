@@ -393,21 +393,32 @@ export default function SettingsPanel({ workers, naves, providers, adminCred, on
 
 // ── Registro histórico con grid-cols-2 ────────────────────────────────────────
 function ImportRecord({ workers, naves, providers, onSave }) {
-  const toLocal = (d) => { const pad = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}` }
   const now = new Date(), ago = new Date(now - 3600000)
+  const pad = (n) => String(n).padStart(2, '0')
+  const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+  const fmtTime = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  const mergeDateTime = (date, time) => {
+    if (!date || !time) return null
+    const ts = new Date(`${date}T${time}:00`).getTime()
+    return isNaN(ts) ? null : ts
+  }
 
-  const [naveId,    setNaveId]    = useState(naves[0]?.id || '')
-  const [provider,  setProvider]  = useState(providers[0]?.name || '')
-  const [product,   setProduct]   = useState(providers[0]?.products?.[0] || '')
-  const [po,        setPo]        = useState('')
-  const [tipoCarga, setTipoCarga] = useState('')
-  const [startVal,  setStartVal]  = useState(toLocal(ago))
-  const [endVal,    setEndVal]    = useState(toLocal(now))
-  const [cajasEst,  setCajasEst]  = useState('')
-  const [cajasReal, setCajasReal] = useState('')
-  const [descarg,   setDescarg]   = useState([])
-  const [estib,     setEstib]     = useState([])
-  const [saving,    setSaving]    = useState(false)
+  const normProductName = (pr) => typeof pr === 'string' ? pr : (pr?.nombre || '')
+
+  const [naveId,     setNaveId]     = useState(naves[0]?.id || '')
+  const [provider,   setProvider]   = useState(providers[0]?.name || '')
+  const [product,    setProduct]    = useState(normProductName(providers[0]?.products?.[0]))
+  const [po,         setPo]         = useState('')
+  const [tipoCarga,  setTipoCarga]  = useState('')
+  const [startDate,  setStartDate]  = useState(fmtDate(ago))
+  const [startHour,  setStartHour]  = useState(fmtTime(ago))
+  const [endDate,    setEndDate]    = useState(fmtDate(now))
+  const [endHour,    setEndHour]    = useState(fmtTime(now))
+  const [cajasEst,   setCajasEst]   = useState('')
+  const [cajasReal,  setCajasReal]  = useState('')
+  const [descarg,    setDescarg]    = useState([])
+  const [estib,      setEstib]      = useState([])
+  const [saving,     setSaving]     = useState(false)
 
   const selNave = naves.find(n => n.id === naveId)
   const selProv = providers.find(p => p.name === provider)
@@ -418,30 +429,34 @@ function ImportRecord({ workers, naves, providers, onSave }) {
   const labelCls = 'text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 block'
 
   const handleSave = async () => {
-    if (!naveId || !provider || !product || !startVal || !endVal) return
-    // Validar que las fechas sean válidas (iOS Safari puede devolver NaN)
-    const startTime = new Date(startVal).getTime()
-    const endTime   = new Date(endVal).getTime()
-    if (isNaN(startTime) || isNaN(endTime)) {
-      alert('Las fechas ingresadas no son válidas. Verifica el formato.')
+    if (!naveId || !provider || !product) return
+    const startTime = mergeDateTime(startDate, startHour)
+    const endTime   = mergeDateTime(endDate, endHour)
+    if (!startTime || !endTime) {
+      alert('Las fechas ingresadas no son válidas.')
       return
     }
     if (endTime <= startTime) {
       alert('La hora de fin debe ser posterior a la hora de inicio.')
       return
     }
+    console.log('handleSave LLAMADO:', { naveId, provider, product, startTime, endTime,
+      cajasEst, cajasReal, tipoCarga, descarg, estib })
     setSaving(true)
     try {
       const ok = await onSave({
-        naveId, naveName: selNave?.name || naveId, provider, product, po, tipoCarga,
+        naveId, naveName: selNave?.name || naveId, provider,
+        product: typeof product === 'string' ? product : product?.nombre || '',
+        po, tipoCarga,
         startTime, endTime,
-        cajasEstimadas: cajasEst ? Number(cajasEst) : null, cajasReales: cajasReal ? Number(cajasReal) : null,
+        cajasEstimadas: cajasEst ? Number(cajasEst) : null,
+        cajasReales:    cajasReal ? Number(cajasReal) : null,
         workers: [...new Set([...descarg, ...estib])], descargadores: descarg, estibadores: estib,
       })
       if (ok) { setPo(''); setTipoCarga(''); setCajasEst(''); setCajasReal(''); setDescarg([]); setEstib([]) }
     } catch (err) {
       console.error('Error guardando registro histórico:', err)
-      alert('Error al guardar. Revisa tu conexión e intenta de nuevo.')
+      alert(`Error al guardar: ${err.message || JSON.stringify(err)}`)
     } finally {
       setSaving(false)
     }
@@ -469,7 +484,7 @@ function ImportRecord({ workers, naves, providers, onSave }) {
         </div>
         <div>
           <label className={labelCls}>Proveedor</label>
-          <select value={provider} onChange={e => { setProvider(e.target.value); setProduct(providers.find(p=>p.name===e.target.value)?.products?.[0]||'') }} className={inputCls}>
+          <select value={provider} onChange={e => { setProvider(e.target.value); setProduct(normProductName(providers.find(p=>p.name===e.target.value)?.products?.[0])) }} className={inputCls}>
             {providers.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
           </select>
         </div>
@@ -489,11 +504,17 @@ function ImportRecord({ workers, naves, providers, onSave }) {
         </div>
         <div>
           <label className={labelCls}>🕐 Hora inicio</label>
-          <input type="datetime-local" value={startVal} onChange={e => setStartVal(e.target.value)} className={inputCls} />
+          <div className="flex gap-2">
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={inputCls} />
+            <input type="time" value={startHour} onChange={e => setStartHour(e.target.value)} className="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-indigo-400 w-32" />
+          </div>
         </div>
         <div>
           <label className={labelCls}>🕐 Hora fin</label>
-          <input type="datetime-local" value={endVal} onChange={e => setEndVal(e.target.value)} className={inputCls} />
+          <div className="flex gap-2">
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={inputCls} />
+            <input type="time" value={endHour} onChange={e => setEndHour(e.target.value)} className="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-indigo-400 w-32" />
+          </div>
         </div>
         <div>
           <label className={labelCls}>Cajas estimadas</label>
@@ -532,7 +553,7 @@ function ImportRecord({ workers, naves, providers, onSave }) {
         </div>
       )}
 
-      <button onClick={handleSave} disabled={saving || !naveId || !provider || !product}
+      <button type="button" onClick={handleSave} disabled={saving || !naveId || !provider || !product}
         className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-2.5 flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
         <ClipboardList size={15} /> {saving ? 'Guardando...' : 'Guardar Registro Histórico'}
       </button>

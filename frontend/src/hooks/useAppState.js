@@ -320,8 +320,11 @@ export function useAppState() {
     const descargadores   = data.descargadores || []
     const estibadores     = data.estibadores   || []
     const todosLosWorkers = [...new Set([...descargadores, ...estibadores])]
-    const cajasXDesc  = data.cajasReales && todosLosWorkers.length > 0 ? data.cajasReales / todosLosWorkers.length : null
-    const cajasXEstib = data.cajasReales && todosLosWorkers.length > 0 ? data.cajasReales / todosLosWorkers.length : null
+    // Redondear a entero — columnas son INTEGER en Supabase
+    const cajasReales = data.cajasReales ? Math.round(Number(data.cajasReales)) : null
+    const cajasEst    = data.cajasEstimadas ? Math.round(Number(data.cajasEstimadas)) : null
+    const cajasXDesc  = cajasReales && todosLosWorkers.length > 0 ? Math.round(cajasReales / todosLosWorkers.length) : null
+    const cajasXEstib = cajasReales && todosLosWorkers.length > 0 ? Math.round(cajasReales / todosLosWorkers.length) : null
     const record = {
       id:                  uid(),
       naveId:              data.naveId,
@@ -330,20 +333,31 @@ export function useAppState() {
       product:             data.product,
       po:                  data.po || null,
       workers:             data.workers || [],
-      descargadores:       data.descargadores || [],
-      estibadores:         data.estibadores || [],
+      descargadores,
+      estibadores,
       startTime:           data.startTime,
       endTime:             data.endTime,
       status:              'finished',
       tipo_carga:          data.tipoCarga || null,
-      cajas_estimadas:     data.cajasEstimadas || null,
-      cajas_reales:        data.cajasReales || null,
+      cajas_estimadas:     cajasEst,
+      cajas_reales:        cajasReales,
       cajas_x_descargador: cajasXDesc,
       cajas_x_estibador:   cajasXEstib,
     }
-    const { error } = await supabase.from('records').insert([record])
-    if (error) { console.error('Error importando record:', error); toast('❌ Error al guardar el registro.'); return false }
-    setRecords((prev) => [record, ...prev])
+    console.log('importRecord PAYLOAD:', JSON.stringify(record))
+    const { data: insertData, error } = await supabase.from('records').insert([record]).select()
+    console.log('SUPABASE RESPONSE:', JSON.stringify({ data: insertData, error }))
+    if (error) {
+      console.error('importRecord Supabase error:', {
+        code: error.code, message: error.message,
+        details: error.details, hint: error.hint,
+      })
+      toast(`❌ Error al guardar: ${error.message || error.code || JSON.stringify(error)}`)
+      return false
+    }
+    // Usar los datos reales que devuelve Supabase si están disponibles
+    const savedRecord = insertData?.[0] || record
+    setRecords((prev) => [savedRecord, ...prev])
     insertLog(record.id, session?.workerName || 'admin', 'creada', 'importado manualmente')
     toast('✅ Registro histórico guardado')
     return true
@@ -398,9 +412,9 @@ export function useAppState() {
     const estibadores   = a.estibadores   || []
     const todosLosWorkers = [...new Set([...descargadores, ...estibadores])]
     const cajasXDescarg = cajasFinales && todosLosWorkers.length > 0
-      ? cajasFinales / todosLosWorkers.length : null
+      ? Math.round(cajasFinales / todosLosWorkers.length) : null
     const cajasXEstib   = cajasFinales && todosLosWorkers.length > 0
-      ? cajasFinales / todosLosWorkers.length : null
+      ? Math.round(cajasFinales / todosLosWorkers.length) : null
 
     const record = {
       ...a,
@@ -410,10 +424,6 @@ export function useAppState() {
       cajasXDescargador: cajasXDescarg     || null,
       cajasXEstibador:   cajasXEstib       || null,
     }
-    setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
-    setRecords((r) => [record, ...r])
-    clearTimer(a.id)
-    await supabase.from('assignments').delete().eq('id', a.id)
 
     // Mapear a snake_case para Supabase
     const row = {
@@ -436,8 +446,21 @@ export function useAppState() {
       cajas_x_estibador:   cajasXEstib || null,
       categoria:           record.categoria || null,
     }
+
+    // Primero guardar en Supabase — si falla, NO actualizar estado local
+    // Esto evita que la descarga desaparezca del dashboard sin quedar en historial
     const { error } = await supabase.from('records').insert([row])
-    if (error) { console.error('Error guardando record:', error); toast('❌ Error al finalizar la descarga. Intenta de nuevo.') }
+    if (error) {
+      console.error('Error guardando record:', error)
+      toast(`❌ Error al finalizar: ${error.message || error.code || 'Sin conexión — intenta de nuevo'}`)
+      return
+    }
+
+    // Solo si Supabase confirmó, actualizar estado local
+    setAssignments((prev) => { const next = { ...prev }; delete next[naveId]; return next })
+    setRecords((r) => [record, ...r])
+    clearTimer(a.id)
+    await supabase.from('assignments').delete().eq('id', a.id)
     insertLog(a.id, session?.workerName || 'admin', 'finalizada', cajasFinales ? `${cajasFinales} cajas` : '')
   }
 
@@ -518,55 +541,107 @@ export function useAppState() {
   }
 
   const editRecord = async (id, changes) => {
-    // ── Recalcular cajas por rol automáticamente ──────────────────────────
-    // Si se editan cajasReales o los roles, recalcular cajasXDescargador/Estibador
     const existing = records.find((r) => r.id === id) || {}
-    const merged   = { ...existing, ...changes }
 
     const cajasReales   = changes.cajasReales    ?? changes.cajas_reales    ?? existing.cajasReales    ?? existing.cajas_reales    ?? null
     const descargadores = changes.descargadores  ?? existing.descargadores  ?? []
     const estibadores   = changes.estibadores    ?? existing.estibadores    ?? []
 
+    // Recalcular cajas por rol — redondear a entero porque la columna es INTEGER en Supabase
     if (cajasReales) {
       const todosLosWorkers = [...new Set([...descargadores, ...estibadores])]
       if (todosLosWorkers.length > 0) {
         if (!changes.cajasXDescargador && !changes.cajas_x_descargador) {
-          changes.cajasXDescargador   = cajasReales / todosLosWorkers.length
+          changes.cajasXDescargador   = Math.round(cajasReales / todosLosWorkers.length)
           changes.cajas_x_descargador = changes.cajasXDescargador
         }
         if (!changes.cajasXEstibador && !changes.cajas_x_estibador) {
-          changes.cajasXEstibador   = cajasReales / todosLosWorkers.length
+          changes.cajasXEstibador   = Math.round(cajasReales / todosLosWorkers.length)
           changes.cajas_x_estibador = changes.cajasXEstibador
         }
       }
     }
-    // ─────────────────────────────────────────────────────────────────────
 
-    setRecords((prev) => prev.map((r) => r.id === id ? { ...r, ...changes } : r))
-    // Mapear a snake_case para Supabase
+    // Mapear a snake_case para Supabase — todos los numéricos como enteros
     const supabaseChanges = {}
-    if (changes.cajasEstimadas  !== undefined) supabaseChanges.cajas_estimadas     = changes.cajasEstimadas
-    if (changes.cajasReales     !== undefined) supabaseChanges.cajas_reales        = changes.cajasReales
-    if (changes.cajasXDescargador !== undefined) supabaseChanges.cajas_x_descargador = changes.cajasXDescargador
-    if (changes.cajasXEstibador !== undefined) supabaseChanges.cajas_x_estibador   = changes.cajasXEstibador
-    if (changes.descargadores   !== undefined) supabaseChanges.descargadores       = changes.descargadores
-    if (changes.estibadores     !== undefined) supabaseChanges.estibadores         = changes.estibadores
-    if (changes.tipoCarga       !== undefined) supabaseChanges.tipo_carga          = changes.tipoCarga
-    if (changes.provider        !== undefined) supabaseChanges.provider            = changes.provider
-    if (changes.product         !== undefined) supabaseChanges.product             = changes.product
-    if (changes.po              !== undefined) supabaseChanges.po                  = changes.po
-    if (changes.workers         !== undefined) supabaseChanges.workers             = changes.workers
-    // Horas de inicio y fin
-    if (changes.startTime       !== undefined) supabaseChanges.startTime           = changes.startTime
-    if (changes.endTime         !== undefined) supabaseChanges.endTime             = changes.endTime
-    // Campos que ya vienen en snake_case desde HistorialFilters
-    if (changes.cajas_estimadas     !== undefined) supabaseChanges.cajas_estimadas     = changes.cajas_estimadas
-    if (changes.cajas_reales        !== undefined) supabaseChanges.cajas_reales        = changes.cajas_reales
-    if (changes.cajas_x_descargador !== undefined) supabaseChanges.cajas_x_descargador = changes.cajas_x_descargador
-    if (changes.cajas_x_estibador   !== undefined) supabaseChanges.cajas_x_estibador   = changes.cajas_x_estibador
-    const { error } = await supabase.from('records').update(supabaseChanges).eq('id', id)
-    if (error) console.error('Error editando record:', error)
+    if (changes.cajasEstimadas      !== undefined) supabaseChanges.cajas_estimadas     = changes.cajasEstimadas     != null ? Math.round(Number(changes.cajasEstimadas))     : null
+    if (changes.cajasReales         !== undefined) supabaseChanges.cajas_reales        = changes.cajasReales        != null ? Math.round(Number(changes.cajasReales))        : null
+    if (changes.cajasXDescargador   !== undefined) supabaseChanges.cajas_x_descargador = changes.cajasXDescargador  != null ? Math.round(Number(changes.cajasXDescargador))  : null
+    if (changes.cajasXEstibador     !== undefined) supabaseChanges.cajas_x_estibador   = changes.cajasXEstibador    != null ? Math.round(Number(changes.cajasXEstibador))    : null
+    if (changes.cajas_estimadas     !== undefined) supabaseChanges.cajas_estimadas     = changes.cajas_estimadas    != null ? Math.round(Number(changes.cajas_estimadas))    : null
+    if (changes.cajas_reales        !== undefined) supabaseChanges.cajas_reales        = changes.cajas_reales       != null ? Math.round(Number(changes.cajas_reales))       : null
+    if (changes.cajas_x_descargador !== undefined) supabaseChanges.cajas_x_descargador = changes.cajas_x_descargador != null ? Math.round(Number(changes.cajas_x_descargador)) : null
+    if (changes.cajas_x_estibador   !== undefined) supabaseChanges.cajas_x_estibador   = changes.cajas_x_estibador  != null ? Math.round(Number(changes.cajas_x_estibador))  : null
+    if (changes.descargadores       !== undefined) supabaseChanges.descargadores       = changes.descargadores
+    if (changes.estibadores         !== undefined) supabaseChanges.estibadores         = changes.estibadores
+    if (changes.tipoCarga           !== undefined) supabaseChanges.tipo_carga          = changes.tipoCarga
+    if (changes.provider            !== undefined) supabaseChanges.provider            = changes.provider
+    if (changes.product             !== undefined) supabaseChanges.product             = changes.product
+    if (changes.po                  !== undefined) supabaseChanges.po                  = changes.po
+    if (changes.workers             !== undefined) supabaseChanges.workers             = changes.workers
+    if (changes.startTime           !== undefined) supabaseChanges.startTime           = changes.startTime
+    if (changes.endTime             !== undefined) supabaseChanges.endTime             = changes.endTime
+
+    console.log('PAYLOAD A SUPABASE:', JSON.stringify(supabaseChanges))
+    console.log('ID DEL REGISTRO:', id, '| TIPO:', typeof id)
+
+    // Intentar UPDATE primero
+    const { data: updatedRows, error } = await supabase
+      .from('records')
+      .update(supabaseChanges)
+      .eq('id', id)
+      .select('id')
+
+    console.log('RESULTADO SUPABASE UPDATE:', { error, rowsActualizadas: updatedRows?.length ?? 'null' })
+
+    if (error) {
+      console.error('Supabase error completo:', {
+        code: error.code, message: error.message,
+        details: error.details, hint: error.hint,
+      })
+      toast(`❌ Error al guardar: ${error.message || error.code || JSON.stringify(error)}`)
+      return false
+    }
+
+    // Si el UPDATE no encontró el registro (existe en local pero no en Supabase), hacer INSERT completo
+    if (!updatedRows || updatedRows.length === 0) {
+      console.warn(`editRecord: id ${id} no existe en Supabase — haciendo INSERT`)
+      const fullRow = {
+        id,
+        naveId:              existing.naveId,
+        naveName:            existing.naveName,
+        provider:            existing.provider,
+        product:             existing.product,
+        po:                  existing.po || null,
+        workers:             existing.workers || [],
+        descargadores:       descargadores,
+        estibadores:         estibadores,
+        startTime:           supabaseChanges.startTime ?? existing.startTime,
+        endTime:             supabaseChanges.endTime   ?? existing.endTime,
+        status:              existing.status || 'finished',
+        tipo_carga:          supabaseChanges.tipo_carga          ?? existing.tipo_carga ?? existing.tipoCarga ?? null,
+        cajas_estimadas:     supabaseChanges.cajas_estimadas     ?? (existing.cajas_estimadas  != null ? Math.round(Number(existing.cajas_estimadas))  : existing.cajasEstimadas  != null ? Math.round(Number(existing.cajasEstimadas))  : null),
+        cajas_reales:        supabaseChanges.cajas_reales        ?? (existing.cajas_reales     != null ? Math.round(Number(existing.cajas_reales))     : existing.cajasReales     != null ? Math.round(Number(existing.cajasReales))     : null),
+        cajas_x_descargador: supabaseChanges.cajas_x_descargador ?? null,
+        cajas_x_estibador:   supabaseChanges.cajas_x_estibador   ?? null,
+        categoria:           existing.categoria || null,
+      }
+      console.log('INSERT PAYLOAD:', JSON.stringify(fullRow))
+      const { error: insertErr } = await supabase.from('records').insert([fullRow])
+      if (insertErr) {
+        console.error('Supabase INSERT error:', {
+          code: insertErr.code, message: insertErr.message,
+          details: insertErr.details, hint: insertErr.hint,
+        })
+        toast(`❌ Error al guardar: ${insertErr.message || insertErr.code}`)
+        return false
+      }
+    }
+
+    // Solo actualizar estado local después de confirmar Supabase
+    setRecords((prev) => prev.map((r) => r.id === id ? { ...r, ...changes } : r))
     insertLog(id, session?.workerName || 'admin', 'editada', JSON.stringify(changes))
+    return true
   }
 
   // ── Vistas derivadas ──────────────────────────────────────────────────────

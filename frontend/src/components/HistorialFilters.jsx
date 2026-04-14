@@ -191,32 +191,64 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
   const [estib,      setEstib]      = useState(r.estibadores    || [])
   const [tipoCarga,  setTipoCarga]  = useState(r.tipoCarga || r.tipo_carga || '')
 
-  // Convertir timestamps a formato datetime-local
-  const toDatetimeLocal = (ts) => {
-    if (!ts) return ''
+  // Separar timestamp en fecha + hora para compatibilidad con iOS Safari
+  // (datetime-local no es soportado en iOS Safari < 14.5)
+  const splitTs = (ts) => {
+    if (!ts) return { date: '', time: '' }
     const d = new Date(ts)
     const pad = (n) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    return {
+      date: `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
+      time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    }
   }
-  const [startVal, setStartVal] = useState(() => toDatetimeLocal(r.startTime))
-  const [endVal,   setEndVal]   = useState(() => toDatetimeLocal(r.endTime))
+  const mergeDateTime = (date, time) => {
+    if (!date || !time) return null
+    const ts = new Date(`${date}T${time}:00`).getTime()
+    return isNaN(ts) ? null : ts
+  }
+  const initStart = splitTs(r.startTime)
+  const initEnd   = splitTs(r.endTime)
+  const [startDate, setStartDate] = useState(initStart.date)
+  const [startTime, setStartTime] = useState(initStart.time)
+  const [endDate,   setEndDate]   = useState(initEnd.date)
+  const [endTime,   setEndTime]   = useState(initEnd.time)
+
+  const [saving,    setSaving]    = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const toggleDescarg = (name) => setDescarg((p) => p.includes(name) ? p.filter((x) => x !== name) : [...p, name])
   const toggleEstib   = (name) => setEstib((p)   => p.includes(name) ? p.filter((x) => x !== name) : [...p, name])
 
-  const saveCajas = () => {
+  const saveCajas = async () => {
+    setSaveError('')
     const changes = {
       cajasEstimadas: cajasEst  ? Number(cajasEst)  : null,
       cajasReales:    cajasReal ? Number(cajasReal) : null,
       descargadores:  descarg,
       estibadores:    estib,
-      // Preservar tipoCarga para que el cálculo de puntos sea correcto
       tipoCarga:      tipoCarga || r.tipoCarga || r.tipo_carga || null,
     }
-    if (startVal) changes.startTime = new Date(startVal).getTime()
-    if (endVal)   changes.endTime   = new Date(endVal).getTime()
-    onEditCajas(r.id, changes)
-    setEditCajas(false)
+    // Usar campos separados date + time — compatible con todos los iOS Safari
+    if (startDate && startTime) {
+      const ts = mergeDateTime(startDate, startTime)
+      if (!ts) { setSaveError('Hora inicio inválida'); return }
+      changes.startTime = ts
+    }
+    if (endDate && endTime) {
+      const ts = mergeDateTime(endDate, endTime)
+      if (!ts) { setSaveError('Hora fin inválida'); return }
+      changes.endTime = ts
+    }
+    setSaving(true)
+    try {
+      const ok = await onEditCajas(r.id, changes)
+      if (ok !== false) setEditCajas(false)
+    } catch (err) {
+      setSaveError(err.message || JSON.stringify(err))
+    } finally {
+      setSaving(false)
+    }
   }
   return (
     <div className={`rounded-xl border p-3 text-sm bg-white dark:bg-[#162050] ${
@@ -317,11 +349,19 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
           </div>
           <div className="space-y-1">
             <p className="text-xs text-[#8fa3b1] font-semibold">🕐 Hora inicio:</p>
-            <input type="datetime-local" value={startVal} onChange={(e) => setStartVal(e.target.value)}
-              className="w-full rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+            <div className="flex gap-2">
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                className="flex-1 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+              <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
+                className="w-24 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+            </div>
             <p className="text-xs text-[#8fa3b1] font-semibold">🕐 Hora fin:</p>
-            <input type="datetime-local" value={endVal} onChange={(e) => setEndVal(e.target.value)}
-              className="w-full rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+            <div className="flex gap-2">
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                className="flex-1 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+              <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)}
+                className="w-24 rounded-lg border border-[#8fa3b1]/30 bg-transparent px-2 py-1 text-xs outline-none focus:border-[#1a3a8f]" />
+            </div>
           </div>
           {workers.length > 0 && (
             <>
@@ -350,9 +390,16 @@ function HistorialRow({ record: r, search, isAdmin, onDelete, onEditCajas, worke
             </>
           )}
           <div className="flex gap-2">
-            <button onClick={saveCajas} className="px-3 py-1 rounded-lg bg-[#1a3a8f] text-white text-xs font-bold">Guardar</button>
-            <button onClick={() => setEditCajas(false)} className="text-xs text-[#8fa3b1]">Cancelar</button>
+            <button type="button" onClick={saveCajas} disabled={saving} className="px-3 py-1 rounded-lg bg-[#1a3a8f] text-white text-xs font-bold disabled:opacity-50">
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+            <button type="button" onClick={() => setEditCajas(false)} className="text-xs text-[#8fa3b1]">Cancelar</button>
           </div>
+          {saveError && (
+            <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg px-2 py-1 break-all">
+              ❌ {saveError}
+            </p>
+          )}
         </div>
       )}
 
