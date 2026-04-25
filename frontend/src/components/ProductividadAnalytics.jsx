@@ -1,44 +1,35 @@
 /**
  * ProductividadAnalytics
  * Podio claro + ranking con barras + comparativa por día y semana con colores por operador.
+ * El rango "Mes actual" usa exactamente el mismo período que MonthlyAnalytics.
  */
 import { useMemo, useState } from 'react'
 import { getCajasWorker, getFactorCarga, medallaRanking, calcResumenWorker } from '../utils/productividad'
 import { esDiaOperativo } from '../config/operacion'
-import { startOfWeek, endOfWeek, format } from 'date-fns'
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 // Paleta fija — un color por operador, consistente en toda la vista
 const PALETA = [
-  '#3b82f6', // azul
-  '#ec4899', // rosa
-  '#10b981', // verde esmeralda
-  '#f59e0b', // ámbar
-  '#8b5cf6', // violeta
-  '#06b6d4', // cyan
-  '#f97316', // naranja
-  '#e11d48', // rojo
-  '#84cc16', // lima
-  '#a78bfa', // lavanda
+  '#3b82f6', '#ec4899', '#10b981', '#f59e0b',
+  '#8b5cf6', '#06b6d4', '#f97316', '#e11d48',
+  '#84cc16', '#a78bfa',
 ]
 
 function buildColorMap(operadores) {
   const map = {}
-  operadores.forEach((name, i) => {
-    map[name.toLowerCase().trim()] = PALETA[i % PALETA.length]
-  })
+  operadores.forEach((name, i) => { map[name.toLowerCase().trim()] = PALETA[i % PALETA.length] })
   return map
 }
-
 function getColor(colorMap, name) {
   return colorMap[name.toLowerCase().trim()] ?? '#8fa3b1'
 }
 
-/** Records terminados en los últimos N días, solo días operativos */
-function filtrarRecords(records, dias) {
-  const desde = Date.now() - dias * 24 * 60 * 60 * 1000
+/** Records terminados en un rango de timestamps, solo días operativos */
+function filtrarRecords(records, desde, hasta) {
   return records.filter(
-    (r) => r.startTime >= desde && r.status === 'finished' && !r.deleted_at && esDiaOperativo(r.startTime)
+    (r) => r.startTime >= desde && r.startTime <= hasta &&
+           r.status === 'finished' && !r.deleted_at && esDiaOperativo(r.startTime)
   )
 }
 
@@ -55,17 +46,19 @@ function calcWorker(recs, workerName, configPuntos) {
   return { cajas: Math.round(cajas), puntos: Math.round(puntos) }
 }
 
-/** Genera los últimos N días */
-function generarDias(n) {
+/** Genera días entre dos timestamps */
+function generarDiasEnRango(desde, hasta) {
   const dias = []
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i)
-    const fin = new Date(d); fin.setDate(fin.getDate() + 1)
+  const cursor = new Date(desde); cursor.setHours(0, 0, 0, 0)
+  const fin    = new Date(hasta)
+  while (cursor <= fin) {
+    const siguiente = new Date(cursor); siguiente.setDate(siguiente.getDate() + 1)
     dias.push({
-      label:  d.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: '2-digit' }),
-      inicio: d.getTime(),
-      fin:    fin.getTime(),
+      label:  cursor.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: '2-digit' }),
+      inicio: cursor.getTime(),
+      fin:    siguiente.getTime(),
     })
+    cursor.setDate(cursor.getDate() + 1)
   }
   return dias
 }
@@ -88,15 +81,38 @@ function generarSemanas(records) {
   return Object.values(map).sort((a, b) => b.inicio - a.inicio)
 }
 
-export default function ProductividadAnalytics({ records = [], dark, assignments = [], configPuntos }) {
-  const [rango,        setRango]        = useState('semana') // 'semana' | 'mes' | 'todo'
-  const [vistaDetalle, setVistaDetalle] = useState('dia')    // 'dia' | 'semana'
+export default function ProductividadAnalytics({ records = [], assignments = [], configPuntos }) {
+  const [rango,        setRango]        = useState('mes_actual')
+  const [vistaDetalle, setVistaDetalle] = useState('semana')
 
-  const diasRango = rango === 'semana' ? 7 : rango === 'mes' ? 30 : 90
+  // Rango de fechas según selección
+  const { desde, hasta, rangoLabel } = useMemo(() => {
+    const now = new Date()
+    if (rango === 'semana') return {
+      desde: Date.now() - 7 * 24 * 60 * 60 * 1000,
+      hasta: Date.now(),
+      rangoLabel: 'Últimos 7 días',
+    }
+    if (rango === 'mes_actual') return {
+      desde: startOfMonth(now).getTime(),
+      hasta: endOfMonth(now).getTime(),
+      rangoLabel: format(now, 'MMMM yyyy', { locale: es }),
+    }
+    if (rango === 'mes30') return {
+      desde: Date.now() - 30 * 24 * 60 * 60 * 1000,
+      hasta: Date.now(),
+      rangoLabel: 'Últimos 30 días',
+    }
+    return {
+      desde: Date.now() - 90 * 24 * 60 * 60 * 1000,
+      hasta: Date.now(),
+      rangoLabel: 'Últimos 90 días',
+    }
+  }, [rango])
 
   const recordsFiltrados = useMemo(
-    () => filtrarRecords(records, diasRango),
-    [records, diasRango]
+    () => filtrarRecords(records, desde, hasta),
+    [records, desde, hasta]
   )
 
   // Ranking ordenado por puntos
@@ -110,26 +126,21 @@ export default function ProductividadAnalytics({ records = [], dark, assignments
       .sort((a, b) => b.puntosTotales - a.puntosTotales)
   }, [recordsFiltrados, assignments, configPuntos])
 
-  // Mapa de colores fijo
   const colorMap = useMemo(() => buildColorMap(ranking.map((r) => r.name)), [ranking])
   const gc = (name) => getColor(colorMap, name)
-
   const maxPuntos = ranking[0]?.puntosTotales || 1
 
-  // Días para comparativa
-  const diasDetalle = useMemo(() => generarDias(diasRango), [diasRango])
+  // Comparativa por día
+  const diasDetalle = useMemo(() => generarDiasEnRango(desde, hasta), [desde, hasta])
 
-  // Comparativa por día: para cada día, puntos de cada operador
   const comparativaDia = useMemo(() => {
     return diasDetalle.map((dia) => {
       const recs = recordsFiltrados.filter((r) => r.startTime >= dia.inicio && r.startTime < dia.fin)
       if (recs.length === 0) return null
       const datos = ranking.map((w) => ({ name: w.name, ...calcWorker(recs, w.name, configPuntos) }))
-      const hayActividad = datos.some((d) => d.cajas > 0)
-      if (!hayActividad) return null
-      // Ordenar por puntos para saber quién ganó ese día
-      const ordenado = [...datos].sort((a, b) => b.puntos - a.puntos)
-      return { ...dia, datos, ganador: ordenado[0]?.name }
+      if (!datos.some((d) => d.cajas > 0)) return null
+      const ganador = [...datos].sort((a, b) => b.puntos - a.puntos)[0]?.name
+      return { ...dia, datos, ganador }
     }).filter(Boolean)
   }, [diasDetalle, recordsFiltrados, ranking, configPuntos])
 
@@ -138,11 +149,11 @@ export default function ProductividadAnalytics({ records = [], dark, assignments
 
   const comparativaSemana = useMemo(() => {
     return semanasDetalle.map((sem) => {
-      const recs = recordsFiltrados.filter((r) => r.startTime >= sem.inicio && r.startTime < sem.fin)
+      const recs  = recordsFiltrados.filter((r) => r.startTime >= sem.inicio && r.startTime < sem.fin)
       const datos = ranking.map((w) => ({ name: w.name, ...calcWorker(recs, w.name, configPuntos) }))
-      const ordenado = [...datos].sort((a, b) => b.puntos - a.puntos)
-      return { ...sem, datos, ganador: ordenado[0]?.name }
-    })
+      const ganador = [...datos].sort((a, b) => b.puntos - a.puntos)[0]?.name
+      return { ...sem, datos, ganador }
+    }).filter((s) => s.datos.some((d) => d.cajas > 0))
   }, [semanasDetalle, recordsFiltrados, ranking, configPuntos])
 
   if (ranking.length === 0) {
@@ -156,7 +167,6 @@ export default function ProductividadAnalytics({ records = [], dark, assignments
   }
 
   const top3 = ranking.slice(0, 3)
-  const resto = ranking.slice(3)
 
   return (
     <div className="space-y-4">
@@ -164,9 +174,10 @@ export default function ProductividadAnalytics({ records = [], dark, assignments
       {/* ── Selector de rango ── */}
       <div className="flex rounded-xl overflow-hidden border border-[#8fa3b1]/30">
         {[
-          { id: 'semana', label: '7 días'  },
-          { id: 'mes',    label: '30 días' },
-          { id: 'todo',   label: '90 días' },
+          { id: 'semana',     label: '7 días'      },
+          { id: 'mes_actual', label: 'Mes actual'  },
+          { id: 'mes30',      label: '30 días'     },
+          { id: 'todo',       label: '90 días'     },
         ].map((r) => (
           <button key={r.id} onClick={() => setRango(r.id)}
             className={`flex-1 py-2 text-xs font-semibold transition-colors ${
@@ -182,12 +193,9 @@ export default function ProductividadAnalytics({ records = [], dark, assignments
         <div className="px-4 py-3 border-b border-[#8fa3b1]/10"
           style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}>
           <p className="text-white font-black text-sm">🏆 Podio de Productividad</p>
-          <p className="text-white/70 text-xs">
-            {rango === 'semana' ? 'Últimos 7 días' : rango === 'mes' ? 'Últimos 30 días' : 'Últimos 90 días'} · solo días operativos
-          </p>
+          <p className="text-white/70 text-xs capitalize">{rangoLabel} · solo días operativos</p>
         </div>
 
-        {/* Podio visual */}
         {top3.length >= 1 && (
           <div className="px-4 pt-5 pb-3">
             <div className="flex items-end justify-center gap-3">
@@ -207,7 +215,7 @@ export default function ProductividadAnalytics({ records = [], dark, assignments
                 </div>
               ) : <div className="flex-1" />}
 
-              {/* 1er lugar — más alto */}
+              {/* 1er lugar */}
               <div className="flex-1 text-center">
                 <div className="rounded-t-2xl pt-4 pb-3 px-2 border-2"
                   style={{ borderColor: gc(top3[0].name), background: gc(top3[0].name) + '18' }}>
@@ -272,7 +280,7 @@ export default function ProductividadAnalytics({ records = [], dark, assignments
           style={{ background: 'linear-gradient(135deg, #0f2460 0%, #1a3a8f 100%)' }}>
           <div>
             <p className="text-white font-black text-sm">📅 ¿En qué día te rebasaron?</p>
-            <p className="text-white/70 text-xs">Puntos por operador en cada período · el 🏆 ganó ese día/semana</p>
+            <p className="text-white/70 text-xs">El 🏆 indica quién ganó ese período</p>
           </div>
           <div className="flex rounded-lg overflow-hidden border border-white/20 shrink-0">
             <button onClick={() => setVistaDetalle('dia')}
@@ -305,7 +313,6 @@ export default function ProductividadAnalytics({ records = [], dark, assignments
               const maxPts = Math.max(...periodo.datos.map((d) => d.puntos), 1)
               return (
                 <div key={periodo.label} className="px-4 py-3">
-                  {/* Encabezado del período */}
                   <div className="flex items-center gap-2 mb-2">
                     <p className="font-bold text-xs text-slate-700 dark:text-white capitalize flex-1">{periodo.label}</p>
                     {periodo.ganador && (
@@ -316,8 +323,6 @@ export default function ProductividadAnalytics({ records = [], dark, assignments
                       </div>
                     )}
                   </div>
-
-                  {/* Barras por operador */}
                   <div className="space-y-1.5">
                     {periodo.datos
                       .filter((d) => d.cajas > 0)
