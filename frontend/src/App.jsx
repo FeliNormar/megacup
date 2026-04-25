@@ -39,6 +39,7 @@ export default function App() {
     recordsTotal,
     recordsPageSize,
     fetchRecordsPage,
+    loadMoreRecords,
     visibleAssignments,
     activeNaveIds,
     isAdmin, isAlmacenista, isWorker,
@@ -164,6 +165,7 @@ export default function App() {
               recordsTotal={recordsTotal}
               recordsPageSize={recordsPageSize}
               fetchRecordsPage={fetchRecordsPage}
+              loadMoreRecords={loadMoreRecords}
               trailersCierre={trailersCierre}
               categorias={categorias}
               assignments={Object.values(assignments)}

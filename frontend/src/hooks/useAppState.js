@@ -85,6 +85,24 @@ export function useAppState() {
     }
   }
 
+  const loadMoreRecords = async () => {
+    if (records.length === 0) return
+    const oldest = records[records.length - 1]?.endTime || Date.now()
+    const { data, error } = await supabase
+      .from('records')
+      .select('*')
+      .is('deleted_at', null)
+      .lt('endTime', oldest)
+      .order('endTime', { ascending: false })
+      .limit(50)
+    if (!error && data && data.length > 0) {
+      setRecords((prev) => [...prev, ...data])
+      setRecordsTotal((prev) => prev + data.length)
+      return data.length
+    }
+    return 0
+  }
+
   // ── Sincronización Inicial con Supabase ────────────────────────────────────
   useEffect(() => {
     async function fetchData() {
@@ -128,8 +146,16 @@ export function useAppState() {
           ls.set('mc_trailers_cierre', normalized)
         }
 
-        const { data: recordsData } = await supabase.from('records').select('*').is('deleted_at', null).order('endTime', { ascending: false }).limit(50)
-        if (recordsData && recordsData.length > 0) setRecords(recordsData)
+        const { data: recordsData } = await supabase
+          .from('records')
+          .select('*')
+          .is('deleted_at', null)
+          .order('endTime', { ascending: false })
+          .limit(200)  // Límite generoso para cubrir el mes actual
+        if (recordsData && recordsData.length > 0) {
+          setRecords(recordsData)
+          setRecordsTotal(recordsData.length)
+        }
         const { data: workersData } = await supabase.from('workers').select('*')
         if (workersData && workersData.length > 0) {
           setWorkers(workersData)
@@ -666,6 +692,7 @@ export function useAppState() {
     recordsTotal,
     recordsPageSize: RECORDS_PAGE_SIZE,
     fetchRecordsPage,
+    loadMoreRecords,
 
     // Acciones
     createDescarga,

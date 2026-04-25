@@ -28,7 +28,7 @@ function highlight(text, query) {
   )
 }
 
-export default function HistorialFilters({ records = [], naves = [], workers = [], providers = [], isAdmin, isAlmacenista, onDelete, onEditCajas, categorias = [] }) {
+export default function HistorialFilters({ records = [], naves = [], workers = [], providers = [], isAdmin, isAlmacenista, onDelete, onEditCajas, categorias = [], loadMoreRecords }) {
   const [desde,      setDesde]      = useState('')
   const [hasta,      setHasta]      = useState('')
   const [filtWorker, setFiltWorker] = useState('')
@@ -38,6 +38,7 @@ export default function HistorialFilters({ records = [], naves = [], workers = [
   const [search,     setSearch]     = useState('')
   const [searchVal,  setSearchVal]  = useState('')
   const [page,       setPage]       = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   const debouncedSearch = useDebounce((v) => setSearch(v), 300)
 
@@ -84,6 +85,17 @@ export default function HistorialFilters({ records = [], naves = [], workers = [
     }
     return res
   }, [records, desde, hasta, filtWorker, filtProv, filtNave, search])
+
+  const handleLoadMore = async () => {
+    if (!loadMoreRecords) return
+    setLoadingMore(true)
+    const loaded = await loadMoreRecords()
+    setLoadingMore(false)
+    if (loaded === 0) {
+      // No hay más registros
+      return
+    }
+  }
 
   const paginated = filtered.slice(0, page * PAGE_SIZE)
   const hasMore   = paginated.length < filtered.length
@@ -164,6 +176,16 @@ export default function HistorialFilters({ records = [], naves = [], workers = [
               <button onClick={() => setPage((p) => p + 1)}
                 className="w-full rounded-xl border-2 border-[#8fa3b1]/30 text-[#8fa3b1] text-sm py-3 hover:border-[#1a3a8f] hover:text-[#1a3a8f] flex items-center justify-center gap-2">
                 <ChevronDown size={16} /> Cargar más ({filtered.length - paginated.length} restantes)
+              </button>
+            )}
+            {!hasMore && loadMoreRecords && paginated.length >= 50 && (
+              <button onClick={handleLoadMore} disabled={loadingMore}
+                className="w-full rounded-xl border-2 border-indigo-500/30 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 text-sm py-3 hover:border-indigo-500 font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+                {loadingMore ? (
+                  <>⏳ Cargando...</>
+                ) : (
+                  <>📥 Cargar registros anteriores</>
+                )}
               </button>
             )}
           </>

@@ -6,7 +6,7 @@ import HistorialFilters       from './HistorialFilters'
 import ProductividadAnalytics from './ProductividadAnalytics'
 import InformeProductividad   from './InformeProductividad'
 
-export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab, recordsPage, recordsTotal, recordsPageSize, fetchRecordsPage, trailersCierre = [], categorias = [], assignments = [], configPuntos }) {
+export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, onDeleteRecord, onEditRecord, naves, workers, providers, defaultTab, recordsPage, recordsTotal, recordsPageSize, fetchRecordsPage, loadMoreRecords, trailersCierre = [], categorias = [], assignments = [], configPuntos }) {
   const [view, setView] = useState(defaultTab === 'history' ? 'history' : 'weekly')
   const [showInforme, setShowInforme] = useState(false)
   const printRef = useRef(null)
@@ -117,6 +117,7 @@ export default function Analytics({ records = [], dark, isAdmin, isAlmacenista, 
             onDelete={onDeleteRecord}
             onEditCajas={onEditRecord}
             categorias={categorias}
+            loadMoreRecords={loadMoreRecords}
           />
           {/* Paginación */}
           {recordsTotal > recordsPageSize && (
