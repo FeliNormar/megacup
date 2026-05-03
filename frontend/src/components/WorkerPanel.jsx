@@ -23,6 +23,8 @@ async function clearCacheAndReload() {
   window.location.reload()
 }
 
+// ── Helpers agrupacion mensual ───────────────────────────────────────────────
+
 function semanaDelMes(dia) {
   if (dia <= 7)  return 1
   if (dia <= 14) return 2
@@ -41,36 +43,81 @@ function labelSemana(semana, year, month) {
   return rangos[semana - 1] || ('Semana ' + semana)
 }
 
-const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-function agruparPorMesYSemana(records) {
+/**
+ * Agrupa los records del worker por mes y semana.
+ * Tambien calcula el resumen de cierre de cada mes:
+ *   - cajas propias del worker (getCajasWorker)
+ *   - puntos totales del worker ese mes
+ *   - posicion en el ranking de ese mes (vs todos los operadores)
+ *   - total de operadores ese mes
+ * allRecords = todos los records (no solo del worker) para calcular ranking completo.
+ */
+function agruparPorMesYSemana(myRecords, allRecords, workerName, configPuntos) {
+  // Agrupar records del worker por mes/semana
   const mapa = {}
-  for (const r of records) {
+  for (const r of myRecords) {
     const d     = new Date(r.startTime)
     const year  = d.getFullYear()
     const month = d.getMonth() + 1
     const dia   = d.getDate()
     const sem   = semanaDelMes(dia)
-    const mesKey = year + '-' + String(month).padStart(2,'0')
+    const mesKey = year + '-' + String(month).padStart(2, '0')
     if (!mapa[mesKey]) mapa[mesKey] = { year, month, semanas: {} }
     if (!mapa[mesKey].semanas[sem]) mapa[mesKey].semanas[sem] = []
     mapa[mesKey].semanas[sem].push(r)
   }
+
   return Object.entries(mapa)
     .sort(([a], [b]) => b.localeCompare(a))
-    .map(([key, { year, month, semanas }]) => ({
-      key,
-      label: MESES_ES[month - 1] + ' ' + year,
-      year, month,
-      semanas: Object.entries(semanas)
-        .sort(([a], [b]) => Number(a) - Number(b))
-        .map(([sem, recs]) => ({
-          semana: Number(sem),
-          label:  labelSemana(Number(sem), year, month),
-          records: [...recs].sort((a, b) => a.startTime - b.startTime),
-        })),
-    }))
+    .map(([key, { year, month, semanas }]) => {
+      // Rango del mes para filtrar allRecords
+      const mesStart = new Date(year, month - 1, 1).getTime()
+      const mesEnd   = new Date(year, month, 0, 23, 59, 59, 999).getTime()
+
+      // Todos los records finished del mes (todos los operadores, sin deleted)
+      const recsMes = allRecords.filter(
+        (r) => r.status === 'finished' && !r.deleted_at
+          && r.startTime >= mesStart && r.startTime <= mesEnd
+      )
+
+      // Resumen del worker ese mes
+      const resWorker = calcResumenWorker(recsMes, workerName, [], configPuntos)
+
+      // Ranking completo del mes
+      const operadores = [...new Set(recsMes.flatMap((r) => r.workers || []))]
+      const rankingMes = operadores
+        .map((name) => ({ name, ...calcResumenWorker(recsMes, name, [], configPuntos) }))
+        .sort((a, b) => b.puntosTotales - a.puntosTotales)
+
+      const posicion      = rankingMes.findIndex((r) => r.name === workerName)
+      const posicionFinal = posicion >= 0 ? posicion + 1 : null
+
+      return {
+        key,
+        label: MESES_ES[month - 1] + ' ' + year,
+        year, month,
+        resumen: {
+          descargas:      resWorker.descargas,
+          cajasTotales:   resWorker.cajasTotales,
+          puntosTotales:  resWorker.puntosTotales,
+          posicion:       posicionFinal,
+          totalOperadores: rankingMes.length,
+        },
+        semanas: Object.entries(semanas)
+          .sort(([a], [b]) => Number(a) - Number(b))
+          .map(([sem, recs]) => ({
+            semana:  Number(sem),
+            label:   labelSemana(Number(sem), year, month),
+            records: [...recs].sort((a, b) => a.startTime - b.startTime),
+          })),
+      }
+    })
 }
+// ── Componente principal ─────────────────────────────────────────────────────
+
 export default function WorkerPanel({ records = [], workerName, trailersCierre = [], assignments = {}, configPuntos, onLogout }) {
   const [tab, setTab] = useState('inicio')
   const [showDetalle, setShowDetalle] = useState(false)
@@ -136,7 +183,11 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
     return Object.entries(map)
   }, [myRecords])
 
-  const historialMeses = useMemo(() => agruparPorMesYSemana(myRecords), [myRecords])
+  // Historial mensual con resumen de cierre — usa allRecords para ranking completo
+  const historialMeses = useMemo(
+    () => agruparPorMesYSemana(myRecords, records, workerName, configPuntos),
+    [myRecords, records, workerName, configPuntos]
+  )
   return (
     <div className="space-y-4 pb-8">
       <div className="flex rounded-xl overflow-hidden border border-[#8fa3b1]/30">
@@ -281,10 +332,7 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
                     const esDesc  = r.descargadores?.includes(workerName)
                     const esEstib = r.estibadores?.includes(workerName)
                     const rol     = esDesc && esEstib ? 'Desc + Estib' : esDesc ? 'Descargador' : esEstib ? 'Estibador' : 'Operador'
-                    const cajas   = esDesc  && r.cajasXDescargador ? r.cajasXDescargador
-                                  : esEstib && r.cajasXEstibador   ? r.cajasXEstibador
-                                  : (!esDesc && !esEstib && r.cajas_reales && r.workers?.length > 0)
-                                    ? Math.round(r.cajas_reales / r.workers.length) : null
+                    const cajas   = Math.round(getCajasWorker(r, workerName))
                     return (
                       <div key={r.id} className="px-4 py-3">
                         <div className="flex items-center justify-between mb-1">
@@ -296,7 +344,7 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
                           <span>⏱ {fmtDuration(r.endTime - r.startTime)}</span>
                           <span>🏭 {r.provider}</span>
                           <span className="font-semibold text-[#2563c4]">🎯 {rol}</span>
-                          {cajas && <span className="font-bold text-slate-700 dark:text-white">📦 {cajas} cajas</span>}
+                          {cajas > 0 && <span className="font-bold text-slate-700 dark:text-white">📦 {cajas} cajas tuyas</span>}
                         </div>
                       </div>
                     )
@@ -412,12 +460,58 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
     </div>
   )
 }
+// ── MesCard: tarjeta de resumen + semanas colapsables ───────────────────────
+
+function ResumenCierreMes({ resumen, workerName }) {
+  const { descargas, cajasTotales, puntosTotales, posicion, totalOperadores } = resumen
+  if (!descargas) return null
+
+  const medalla = posicion ? medallaRanking(posicion) : null
+  const esPrimero = posicion === 1
+
+  return (
+    <div className="mx-4 mt-3 mb-1 rounded-2xl overflow-hidden border border-white/20"
+      style={{ background: esPrimero
+        ? 'linear-gradient(135deg, #78350f 0%, #d97706 100%)'
+        : 'linear-gradient(135deg, #1e3a5f 0%, #2563c4 100%)' }}>
+      <div className="px-4 py-3">
+        <div className="flex items-center gap-3 mb-2">
+          {medalla && <span className="text-3xl leading-none">{medalla}</span>}
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-black text-sm">Cierre del mes</p>
+            <p className="text-white/70 text-xs">
+              {posicion
+                ? (posicion === 1 ? 'Primer lugar!' : 'Lugar ' + posicion + ' de ' + totalOperadores + ' operadores')
+                : 'Sin posicion calculada'}
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white/15 rounded-xl py-2 text-center">
+            <p className="font-black text-white text-base">{descargas}</p>
+            <p className="text-white/70 text-[10px]">descargas</p>
+          </div>
+          <div className="bg-white/15 rounded-xl py-2 text-center">
+            <p className="font-black text-white text-base">{cajasTotales.toLocaleString()}</p>
+            <p className="text-white/70 text-[10px]">cajas tuyas</p>
+          </div>
+          <div className="bg-white/15 rounded-xl py-2 text-center">
+            <p className="font-black text-white text-base">{puntosTotales.toLocaleString()}</p>
+            <p className="text-white/70 text-[10px]">puntos</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MesCard({ mes, workerName }) {
   const [semanasAbiertas, setSemanasAbiertas] = useState(() => {
     const set = new Set()
     if (mes.semanas.length > 0) set.add(mes.semanas[mes.semanas.length - 1].semana)
     return set
   })
+
   const toggleSemana = (sem) => {
     setSemanasAbiertas((prev) => {
       const next = new Set(prev)
@@ -425,25 +519,33 @@ function MesCard({ mes, workerName }) {
       return next
     })
   }
-  const totalDescargas = mes.semanas.reduce((acc, s) => acc + s.records.length, 0)
-  const totalCajas     = mes.semanas.reduce((acc, s) => acc + s.records.reduce((a, r) => a + (r.cajas_reales || r.cajasReales || 0), 0), 0)
 
   return (
     <div className="bg-white dark:bg-[#162050] rounded-2xl shadow border border-[#8fa3b1]/20 overflow-hidden">
+      {/* Header del mes */}
       <div className="px-4 py-3 flex items-center justify-between"
         style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}>
         <div>
           <p className="text-white font-black text-base">{mes.label}</p>
-          <p className="text-white/70 text-xs">{totalDescargas} descargas - {totalCajas.toLocaleString()} cajas</p>
+          <p className="text-white/70 text-xs">{mes.resumen.descargas} descargas - {mes.resumen.cajasTotales.toLocaleString()} cajas tuyas</p>
         </div>
-        <div className="text-white/60 text-xs text-right">
-          <p className="font-semibold">{mes.semanas.length} semanas</p>
-        </div>
+        {mes.resumen.posicion && (
+          <div className="text-center bg-white/15 rounded-xl px-3 py-1.5">
+            <p className="text-2xl leading-none">{medallaRanking(mes.resumen.posicion)}</p>
+            <p className="text-white/70 text-[10px]">lugar {mes.resumen.posicion}</p>
+          </div>
+        )}
       </div>
-      <div className="divide-y divide-[#8fa3b1]/10">
+
+      {/* Tarjeta resumen de cierre */}
+      <ResumenCierreMes resumen={mes.resumen} workerName={workerName} />
+
+      {/* Semanas colapsables */}
+      <div className="divide-y divide-[#8fa3b1]/10 mt-2">
         {mes.semanas.map((semana) => {
           const abierta    = semanasAbiertas.has(semana.semana)
-          const cajasTotal = semana.records.reduce((a, r) => a + (r.cajas_reales || r.cajasReales || 0), 0)
+          const cajasTotal = semana.records.reduce((a, r) => a + Math.round(getCajasWorker(r, workerName)), 0)
+
           return (
             <div key={semana.semana}>
               <button onClick={() => toggleSemana(semana.semana)}
@@ -454,13 +556,18 @@ function MesCard({ mes, workerName }) {
                   {abierta ? <ChevronUp size={14} className="text-[#8fa3b1]" /> : <ChevronDown size={14} className="text-[#8fa3b1]" />}
                 </div>
               </button>
+
               {abierta && (
                 <div className="divide-y divide-[#8fa3b1]/10 bg-slate-50 dark:bg-[#0d1b3e]/40">
                   {semana.records.map((r) => {
-                    const fecha = new Date(r.startTime).toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' })
-                    const hora  = fmtTime(r.startTime)
-                    const cajas = r.cajas_reales || r.cajasReales || null
-                    const po    = r.po || null
+                    const fecha  = new Date(r.startTime).toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' })
+                    const hora   = fmtTime(r.startTime)
+                    const cajas  = Math.round(getCajasWorker(r, workerName))
+                    const po     = r.po || null
+                    const esDesc  = r.descargadores?.includes(workerName)
+                    const esEstib = r.estibadores?.includes(workerName)
+                    const rol     = esDesc && esEstib ? 'Desc+Estib' : esDesc ? 'Desc' : esEstib ? 'Estib' : 'Op'
+
                     return (
                       <div key={r.id} className="px-4 py-2.5">
                         <div className="flex items-start justify-between gap-2">
@@ -468,6 +575,7 @@ function MesCard({ mes, workerName }) {
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-xs text-[#1a3a8f] dark:text-white capitalize">{fecha}</span>
                               <span className="text-[10px] text-[#8fa3b1]">{hora}</span>
+                              <span className="text-[10px] text-[#2563c4] font-semibold">{rol}</span>
                               {po && (
                                 <span className="text-[10px] bg-[#1a3a8f]/10 dark:bg-[#1a3a8f]/30 text-[#1a3a8f] dark:text-[#8fa3b1] px-1.5 py-0.5 rounded font-mono font-semibold">
                                   {po}
@@ -480,10 +588,10 @@ function MesCard({ mes, workerName }) {
                               {r.tipo_carga && <span className="text-[10px] text-[#8fa3b1]">- {r.tipo_carga}</span>}
                             </div>
                           </div>
-                          {cajas != null && (
+                          {cajas > 0 && (
                             <div className="text-right shrink-0">
                               <p className="font-black text-sm text-[#ec4899]">{cajas.toLocaleString()}</p>
-                              <p className="text-[9px] text-[#8fa3b1]">cajas</p>
+                              <p className="text-[9px] text-[#8fa3b1]">cajas tuyas</p>
                             </div>
                           )}
                         </div>
@@ -499,6 +607,8 @@ function MesCard({ mes, workerName }) {
     </div>
   )
 }
+
+// ── Sub-componentes ──────────────────────────────────────────────────────────
 
 function ContadorCell({ label, descargas, cajas, highlight }) {
   return (
@@ -540,7 +650,7 @@ function DesgloseDia({ records, workerName }) {
               <span className="font-semibold text-slate-700 dark:text-white">Nave {r.naveName || r.naveId}</span>
               <span className="font-bold text-[#ec4899]">{Math.round(puntos)} pts</span>
             </div>
-            <p className="text-[#8fa3b1] mt-0.5">{cajas} cajas x{factor} ({tipoCarga}) - {mins} min</p>
+            <p className="text-[#8fa3b1] mt-0.5">{Math.round(cajas)} cajas tuyas x{factor} ({tipoCarga}) - {mins} min</p>
           </div>
         )
       })}
