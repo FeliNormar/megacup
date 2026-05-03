@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from 'react'
-import { RefreshCw, ChevronDown, ChevronUp, Home, Trophy, LogOut } from 'lucide-react'
+import { RefreshCw, ChevronDown, ChevronUp, Home, Trophy, Calendar, LogOut } from 'lucide-react'
 import { fmtTime, fmtDuration } from '../utils/time'
 import {
   calcResumenWorker, calcRankingDia, recordsDeHoy,
@@ -23,6 +23,54 @@ async function clearCacheAndReload() {
   window.location.reload()
 }
 
+function semanaDelMes(dia) {
+  if (dia <= 7)  return 1
+  if (dia <= 14) return 2
+  if (dia <= 21) return 3
+  return 4
+}
+
+function labelSemana(semana, year, month) {
+  const diasEnMes = new Date(year, month, 0).getDate()
+  const rangos = [
+    'Semana 1 — 1 al 7',
+    'Semana 2 — 8 al 14',
+    'Semana 3 — 15 al 21',
+    'Semana 4 — 22 al ' + diasEnMes,
+  ]
+  return rangos[semana - 1] || ('Semana ' + semana)
+}
+
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+function agruparPorMesYSemana(records) {
+  const mapa = {}
+  for (const r of records) {
+    const d     = new Date(r.startTime)
+    const year  = d.getFullYear()
+    const month = d.getMonth() + 1
+    const dia   = d.getDate()
+    const sem   = semanaDelMes(dia)
+    const mesKey = year + '-' + String(month).padStart(2,'0')
+    if (!mapa[mesKey]) mapa[mesKey] = { year, month, semanas: {} }
+    if (!mapa[mesKey].semanas[sem]) mapa[mesKey].semanas[sem] = []
+    mapa[mesKey].semanas[sem].push(r)
+  }
+  return Object.entries(mapa)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([key, { year, month, semanas }]) => ({
+      key,
+      label: MESES_ES[month - 1] + ' ' + year,
+      year, month,
+      semanas: Object.entries(semanas)
+        .sort(([a], [b]) => Number(a) - Number(b))
+        .map(([sem, recs]) => ({
+          semana: Number(sem),
+          label:  labelSemana(Number(sem), year, month),
+          records: [...recs].sort((a, b) => a.startTime - b.startTime),
+        })),
+    }))
+}
 export default function WorkerPanel({ records = [], workerName, trailersCierre = [], assignments = {}, configPuntos, onLogout }) {
   const [tab, setTab] = useState('inicio')
   const [showDetalle, setShowDetalle] = useState(false)
@@ -88,16 +136,21 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
     return Object.entries(map)
   }, [myRecords])
 
+  const historialMeses = useMemo(() => agruparPorMesYSemana(myRecords), [myRecords])
   return (
     <div className="space-y-4 pb-8">
       <div className="flex rounded-xl overflow-hidden border border-[#8fa3b1]/30">
         <button onClick={() => setTab('inicio')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold transition-colors ${tab === 'inicio' ? 'bg-[#1a3a8f] text-white' : 'text-[#8fa3b1]'}`}>
-          <Home size={14} /> Inicio
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${tab === 'inicio' ? 'bg-[#1a3a8f] text-white' : 'text-[#8fa3b1]'}`}>
+          <Home size={13} /> Inicio
         </button>
         <button onClick={() => setTab('ranking')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold transition-colors ${tab === 'ranking' ? 'bg-[#1a3a8f] text-white' : 'text-[#8fa3b1]'}`}>
-          <Trophy size={14} /> Mi Ranking
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${tab === 'ranking' ? 'bg-[#1a3a8f] text-white' : 'text-[#8fa3b1]'}`}>
+          <Trophy size={13} /> Mi Ranking
+        </button>
+        <button onClick={() => setTab('historial')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${tab === 'historial' ? 'bg-[#1a3a8f] text-white' : 'text-[#8fa3b1]'}`}>
+          <Calendar size={13} /> Historial
         </button>
       </div>
 
@@ -110,10 +163,10 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
                 <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-green-300 font-black text-sm">Descarga en curso</p>
-                  <p className="text-green-200/80 text-xs truncate">Nave {descargaActiva.naveName || descargaActiva.naveId} · {descargaActiva.provider}</p>
+                  <p className="text-green-200/80 text-xs truncate">Nave {descargaActiva.naveName || descargaActiva.naveId} - {descargaActiva.provider}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-green-300 font-black text-base">{descargaActiva.cajas_asignadas ?? '---'}</p>
+                  <p className="text-green-300 font-black text-base">{descargaActiva.cajas_asignadas ?? '--'}</p>
                   <p className="text-green-200/70 text-[10px]">cajas asig.</p>
                 </div>
               </div>
@@ -154,7 +207,7 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
                 {posDisplay && (
                   <div className="text-center bg-white/15 rounded-xl px-3 py-1.5">
                     <p className="text-2xl leading-none">{medallaRanking(posDisplay)}</p>
-                    <p className="text-white/80 text-[10px] mt-0.5">{posDisplay === 1 ? 'Lider!' : `${posDisplay} de ${totalEquipos}`}</p>
+                    <p className="text-white/80 text-[10px] mt-0.5">{posDisplay === 1 ? 'Lider!' : posDisplay + ' de ' + totalEquipos}</p>
                   </div>
                 )}
               </div>
@@ -230,15 +283,13 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
                     const rol     = esDesc && esEstib ? 'Desc + Estib' : esDesc ? 'Descargador' : esEstib ? 'Estibador' : 'Operador'
                     const cajas   = esDesc  && r.cajasXDescargador ? r.cajasXDescargador
                                   : esEstib && r.cajasXEstibador   ? r.cajasXEstibador
-                                  : (!esDesc && !esEstib && r.cajasReales && r.workers?.length > 0)
-                                    ? Math.round(r.cajasReales / r.workers.length) : null
+                                  : (!esDesc && !esEstib && r.cajas_reales && r.workers?.length > 0)
+                                    ? Math.round(r.cajas_reales / r.workers.length) : null
                     return (
                       <div key={r.id} className="px-4 py-3">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-semibold text-sm text-[#1a3a8f] dark:text-white">Nave {r.naveName || r.naveId}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${r.status === 'finished' ? 'bg-pink-100 text-pink-600' : 'bg-red-100 text-red-600'}`}>
-                            {r.status === 'finished' ? 'Terminado' : 'Incidencia'}
-                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-pink-100 text-pink-600">Terminado</span>
                         </div>
                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[#8fa3b1]">
                           <span>🕐 {fmtTime(r.startTime)}</span>
@@ -256,18 +307,17 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
           )}
         </>
       )}
-
       {tab === 'ranking' && (
         <>
           <div className="rounded-2xl overflow-hidden shadow border border-[#8fa3b1]/20"
             style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}>
             <div className="px-4 py-4 flex items-center gap-4">
-              <div className="text-5xl">{posicionMes >= 0 ? medallaRanking(posicionMes + 1) : '---'}</div>
+              <div className="text-5xl">{posicionMes >= 0 ? medallaRanking(posicionMes + 1) : '--'}</div>
               <div className="flex-1 min-w-0">
                 <p className="text-white font-black text-lg truncate">{workerName}</p>
                 <p className="text-white/70 text-xs">
                   {posicionMes >= 0
-                    ? posicionMes === 0 ? 'Vas en primer lugar este mes!' : `Lugar ${posicionMes + 1} de ${rankingMes.length} operadores`
+                    ? posicionMes === 0 ? 'Vas en primer lugar este mes!' : ('Lugar ' + (posicionMes + 1) + ' de ' + rankingMes.length + ' operadores')
                     : 'Sin actividad este mes aun'}
                 </p>
               </div>
@@ -295,7 +345,7 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
               <div className="px-4 py-3 border-b border-[#8fa3b1]/10"
                 style={{ background: 'linear-gradient(135deg, #0f2460 0%, #1a3a8f 100%)' }}>
                 <p className="text-white font-black text-sm">Ranking del mes</p>
-                <p className="text-white/70 text-xs">Solo dias operativos puntos normalizados</p>
+                <p className="text-white/70 text-xs">Solo dias operativos - puntos normalizados</p>
               </div>
               <div className="divide-y divide-[#8fa3b1]/10">
                 {rankingMes.map((item, idx) => {
@@ -316,7 +366,7 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
                       </div>
                       <div className="ml-9 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%`, background: esTu ? '#1a3a8f' : '#8fa3b1' }} />
+                          style={{ width: pct + '%', background: esTu ? '#1a3a8f' : '#8fa3b1' }} />
                       </div>
                     </div>
                   )
@@ -324,12 +374,26 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
               </div>
             </div>
           )}
-
           {rankingMes.length === 0 && (
             <div className="text-center py-12 text-[#8fa3b1]">
               <div className="text-4xl mb-2">📊</div>
               <p>Sin actividad registrada este mes</p>
             </div>
+          )}
+        </>
+      )}
+
+      {tab === 'historial' && (
+        <>
+          {historialMeses.length === 0 ? (
+            <div className="text-center py-12 text-[#8fa3b1]">
+              <div className="text-4xl mb-2">📅</div>
+              <p>Sin historial disponible</p>
+            </div>
+          ) : (
+            historialMeses.map((mes) => (
+              <MesCard key={mes.key} mes={mes} workerName={workerName} />
+            ))
           )}
         </>
       )}
@@ -345,6 +409,93 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
           <LogOut size={15} /> Cerrar sesion
         </button>
       )}
+    </div>
+  )
+}
+function MesCard({ mes, workerName }) {
+  const [semanasAbiertas, setSemanasAbiertas] = useState(() => {
+    const set = new Set()
+    if (mes.semanas.length > 0) set.add(mes.semanas[mes.semanas.length - 1].semana)
+    return set
+  })
+  const toggleSemana = (sem) => {
+    setSemanasAbiertas((prev) => {
+      const next = new Set(prev)
+      next.has(sem) ? next.delete(sem) : next.add(sem)
+      return next
+    })
+  }
+  const totalDescargas = mes.semanas.reduce((acc, s) => acc + s.records.length, 0)
+  const totalCajas     = mes.semanas.reduce((acc, s) => acc + s.records.reduce((a, r) => a + (r.cajas_reales || r.cajasReales || 0), 0), 0)
+
+  return (
+    <div className="bg-white dark:bg-[#162050] rounded-2xl shadow border border-[#8fa3b1]/20 overflow-hidden">
+      <div className="px-4 py-3 flex items-center justify-between"
+        style={{ background: 'linear-gradient(135deg, #1a3a8f 0%, #2563c4 100%)' }}>
+        <div>
+          <p className="text-white font-black text-base">{mes.label}</p>
+          <p className="text-white/70 text-xs">{totalDescargas} descargas - {totalCajas.toLocaleString()} cajas</p>
+        </div>
+        <div className="text-white/60 text-xs text-right">
+          <p className="font-semibold">{mes.semanas.length} semanas</p>
+        </div>
+      </div>
+      <div className="divide-y divide-[#8fa3b1]/10">
+        {mes.semanas.map((semana) => {
+          const abierta    = semanasAbiertas.has(semana.semana)
+          const cajasTotal = semana.records.reduce((a, r) => a + (r.cajas_reales || r.cajasReales || 0), 0)
+          return (
+            <div key={semana.semana}>
+              <button onClick={() => toggleSemana(semana.semana)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#8fa3b1]/5 transition-colors">
+                <span className="text-xs font-bold text-[#1a3a8f] dark:text-[#8fa3b1]">{semana.label}</span>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs text-[#8fa3b1]">{semana.records.length} desc - {cajasTotal.toLocaleString()} cajas</span>
+                  {abierta ? <ChevronUp size={14} className="text-[#8fa3b1]" /> : <ChevronDown size={14} className="text-[#8fa3b1]" />}
+                </div>
+              </button>
+              {abierta && (
+                <div className="divide-y divide-[#8fa3b1]/10 bg-slate-50 dark:bg-[#0d1b3e]/40">
+                  {semana.records.map((r) => {
+                    const fecha = new Date(r.startTime).toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' })
+                    const hora  = fmtTime(r.startTime)
+                    const cajas = r.cajas_reales || r.cajasReales || null
+                    const po    = r.po || null
+                    return (
+                      <div key={r.id} className="px-4 py-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-xs text-[#1a3a8f] dark:text-white capitalize">{fecha}</span>
+                              <span className="text-[10px] text-[#8fa3b1]">{hora}</span>
+                              {po && (
+                                <span className="text-[10px] bg-[#1a3a8f]/10 dark:bg-[#1a3a8f]/30 text-[#1a3a8f] dark:text-[#8fa3b1] px-1.5 py-0.5 rounded font-mono font-semibold">
+                                  {po}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              <span className="text-[10px] text-[#8fa3b1]">Nave {r.naveName || r.naveId}</span>
+                              {r.provider && <span className="text-[10px] text-[#8fa3b1]">- {r.provider}</span>}
+                              {r.tipo_carga && <span className="text-[10px] text-[#8fa3b1]">- {r.tipo_carga}</span>}
+                            </div>
+                          </div>
+                          {cajas != null && (
+                            <div className="text-right shrink-0">
+                              <p className="font-black text-sm text-[#ec4899]">{cajas.toLocaleString()}</p>
+                              <p className="text-[9px] text-[#8fa3b1]">cajas</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -389,7 +540,7 @@ function DesgloseDia({ records, workerName }) {
               <span className="font-semibold text-slate-700 dark:text-white">Nave {r.naveName || r.naveId}</span>
               <span className="font-bold text-[#ec4899]">{Math.round(puntos)} pts</span>
             </div>
-            <p className="text-[#8fa3b1] mt-0.5">{cajas} cajas x{factor} ({tipoCarga}) {mins} min</p>
+            <p className="text-[#8fa3b1] mt-0.5">{cajas} cajas x{factor} ({tipoCarga}) - {mins} min</p>
           </div>
         )
       })}
