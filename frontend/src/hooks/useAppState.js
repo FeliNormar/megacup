@@ -51,6 +51,9 @@ export function useAppState() {
   const logout = () => {
     clearSession()
     setSession(null)
+    // Forzar recarga limpia para evitar race condition con useVersionCheck
+    // y asegurar que el service worker no restaure estado cacheado
+    window.location.href = '/'
   }
   
   const [workers,   setWorkers]   = useState(() => ls.get('mc_workers',   DEFAULT_WORKERS))
