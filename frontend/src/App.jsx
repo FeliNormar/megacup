@@ -208,6 +208,7 @@ export default function App() {
         onTabChange={setTab}
         isAdmin={isAdmin}
         isAlmacenista={isAlmacenista}
+        isWorker={isWorker}
         online={online}
         activeCount={visibleAssignments.length}
       />
@@ -340,7 +341,7 @@ function EmptyState({ isAdmin, isAlmacenista }) {
   )
 }
 
-function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, online, activeCount }) {
+function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, isWorker, online, activeCount }) {
   const items = NAV_ITEMS.filter((item) => {
     if (item.id === 'new')                                 return isAdmin
     if (item.id === 'analytics' || item.id === 'history')  return isAdmin || isAlmacenista
