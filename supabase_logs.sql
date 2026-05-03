@@ -14,3 +14,4 @@ CREATE TABLE IF NOT EXISTS descarga_logs (
 -- RLS: mismo patrón que el resto del proyecto
 ALTER TABLE descarga_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "allow all descarga_logs" ON descarga_logs FOR ALL USING (true) WITH CHECK (true);
+6/
