@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from 'react'
-import { RefreshCw, ChevronDown, ChevronUp, Home, Trophy } from 'lucide-react'
+import { RefreshCw, ChevronDown, ChevronUp, Home, Trophy, LogOut } from 'lucide-react'
 import { fmtTime, fmtDuration } from '../utils/time'
 import {
   calcResumenWorker, calcRankingDia, recordsDeHoy,
@@ -23,7 +23,7 @@ async function clearCacheAndReload() {
   window.location.reload()
 }
 
-export default function WorkerPanel({ records = [], workerName, trailersCierre = [], assignments = {}, configPuntos }) {
+export default function WorkerPanel({ records = [], workerName, trailersCierre = [], assignments = {}, configPuntos, onLogout }) {
   const [tab, setTab] = useState('inicio')
   const [showDetalle, setShowDetalle] = useState(false)
   const now = new Date()
@@ -338,6 +338,13 @@ export default function WorkerPanel({ records = [], workerName, trailersCierre =
         className="w-full rounded-xl border border-orange-400 text-orange-500 font-semibold text-sm flex items-center justify-center gap-2 py-3">
         <RefreshCw size={15} /> No ves tus datos? Limpiar cache
       </button>
+
+      {onLogout && (
+        <button onClick={onLogout}
+          className="w-full rounded-xl border border-red-400 text-red-500 font-semibold text-sm flex items-center justify-center gap-2 py-3">
+          <LogOut size={15} /> Cerrar sesion
+        </button>
+      )}
     </div>
   )
 }

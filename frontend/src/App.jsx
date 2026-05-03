@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LayoutDashboard, BarChart2, History, PlusCircle, Settings, LogOut, Sun, Moon, Menu, X, RefreshCw } from 'lucide-react'
+import { LayoutDashboard, BarChart2, History, PlusCircle, Settings, LogOut, Sun, Moon, Menu, X, RefreshCw, User } from 'lucide-react'
 
 import { useAppState }     from './hooks/useAppState'
 import { useRealtime }     from './hooks/useRealtime'
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { id: 'new',       icon: PlusCircle,      label: 'Nueva'     },
   { id: 'analytics', icon: BarChart2,       label: 'Analítica' },
   { id: 'history',   icon: History,         label: 'Historial' },
+  { id: 'mipanel',   icon: User,            label: 'Mi Panel'  },
 ]
 
 export default function App() {
@@ -174,7 +175,11 @@ export default function App() {
           )}
 
           {tab === 'history' && isWorker && (
-            <WorkerPanel records={records} workerName={session.workerName} trailersCierre={trailersCierre} assignments={assignments} configPuntos={configPuntos} />
+            <WorkerPanel records={records} workerName={session.workerName} trailersCierre={trailersCierre} assignments={assignments} configPuntos={configPuntos} onLogout={logout} />
+          )}
+
+          {tab === 'mipanel' && isWorker && (
+            <WorkerPanel records={records} workerName={session.workerName} trailersCierre={trailersCierre} assignments={assignments} configPuntos={configPuntos} onLogout={logout} />
           )}
 
           {tab === 'settings' && isAdmin && (
@@ -337,8 +342,9 @@ function EmptyState({ isAdmin, isAlmacenista }) {
 
 function BottomNav({ tab, onTabChange, isAdmin, isAlmacenista, online, activeCount }) {
   const items = NAV_ITEMS.filter((item) => {
-    if (item.id === 'new') return isAdmin
-    if (item.id === 'analytics' || item.id === 'history') return isAdmin || isAlmacenista
+    if (item.id === 'new')                                 return isAdmin
+    if (item.id === 'analytics' || item.id === 'history')  return isAdmin || isAlmacenista
+    if (item.id === 'mipanel')                             return isWorker
     return true
   })
 
